@@ -159,6 +159,7 @@ document.addEventListener("keydown", (e) => {
             : r.status === "capped" ? `Rebuild limit reached (${window.WS_Rebuild.cap}/24h). Next one in ~${mins} min; refetched the current list.`
             : r.status === "failed" ? `Worker rebuild failed (${r.detail || "unknown"}); refetched the current list.`
             : r.status === "disabled" ? `Rebuild off (${r.detail}); refetched the current list.`
+            : r.status === "unauthorized" ? "Sign in before rebuilding the library."
             : "Assets reloaded!", 4200);
         })
         .catch(() => showToast("Reload failed — check connection."));

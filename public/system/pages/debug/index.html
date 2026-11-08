@@ -24,28 +24,7 @@
 <script>document.write('<script src="system/js/endpoints.js?_=' + Date.now() + '"><\/script>');</script>
 <script src="system/js/wordfilter.js"></script>
 
-<script>
-// Start the public SQL asset fetch now, from the <head>, instead of waiting for every
-// stylesheet, CDN script and main.js to download and DOMContentLoaded to
-// fire. main.js's loadAssets() picks this promise up (once) if the URL
-// matches, so the JSON is usually already parsed by the time it needs it.
-(function () {
-  window.WS_SHEET_URL = window.WS_ENDPOINTS.library;   // endpoints.js
-  try {
-    var url = window.WS_SHEET_URL;
-    if (!url) { window.__wsAssetsPrefetch = null; return; }
-    var requestUrl = new URL(url, location.href);
-    requestUrl.searchParams.set("_", String(Date.now()));
-    var p = fetch(requestUrl.href, { cache: "no-store" })
-      .then(function (r) {
-        if (!r.ok) throw new Error("HTTP " + r.status);
-        return r.json();
-      });
-    p.catch(function () {}); // handled by loadAssets; silences "unhandled rejection" if unused
-    window.__wsAssetsPrefetch = { url: url, promise: p };
-  } catch (_) { window.__wsAssetsPrefetch = null; }
-})();
-</script>
+<script>window.WS_SHEET_URL = window.WS_ENDPOINTS.library;</script>
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.9.0/cdn/themes/dark.css" media="print" onload="this.media='all'" />
 <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.9.0/cdn/themes/dark.css" /></noscript>
@@ -458,10 +437,10 @@
 <script defer src="system/js/sanitizer.js"></script>
 <script defer src="system/js/profile.js?v=profile-frame-scope"></script>
 <script defer src="system/js/settings.js?v=theme-fallback-favicon"></script>
-<script defer src="system/js/ui.js"></script>
+<script defer src="system/js/ui.js?v=account-gated-library"></script>
 <script defer src="system/js/stickers.js"></script>
 <script defer src="system/js/quotes.js"></script>
-<script defer src="system/js/main.js"></script>
+<script defer src="system/js/main.js?v=account-gated-library"></script>
 <script defer src="system/js/boom.js"></script>
 <script defer src="system/js/panic.js"></script>
 <script defer src="system/js/shortcuts.js"></script>
@@ -475,7 +454,7 @@
 <script defer src="system/js/gridSettings.js"></script>
 <script defer src="system/js/credits.js"></script>
 <script defer src="system/js/devtools.js"></script>
-<script defer src="system/js/tutorial.js?v=login-no-email-verification"></script>
+<script defer src="system/js/tutorial.js?v=legacy-login-validation"></script>
 <script defer src="system/js/daily.js"></script>
 
 </body>

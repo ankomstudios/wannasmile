@@ -3357,6 +3357,28 @@ window.addEventListener("load", () => {
     return rows;
   }
 
+  let _accountAccessPromise = null;
+  function waitForAccountAccess() {
+    if (window.WS_ACCOUNTS_ENABLED === false) return Promise.resolve();
+    const ticket = window.WS_Ticket;
+    if (!ticket) return Promise.reject(new Error("The account sign-in service is unavailable."));
+    if (_accountAccessPromise) return _accountAccessPromise;
+
+    _accountAccessPromise = ticket.ready.then(() => {
+      if (ticket.approved()) return;
+      return new Promise((resolve) => {
+        const onChange = () => {
+          if (!ticket.approved()) return;
+          document.removeEventListener("ws:ticket-change", onChange);
+          resolve();
+        };
+        document.addEventListener("ws:ticket-change", onChange);
+        onChange();
+      });
+    });
+    return _accountAccessPromise;
+  }
+
   // Every load fetches live, unless the user turned on the data cache
   // (Settings → Page behaviour, datacache.js): then the saved copy is used
   // and DATA isn't contacted until R refetches. With the cache off there's
@@ -3369,14 +3391,7 @@ window.addEventListener("load", () => {
     const cacheable = !sqlFeed && fetchUrl === config.sheetUrl && !!window.WS_DataCache?.enabled();
     let raw;
 
-    // Public SQL assets are open; retain the ticket gate for legacy feeds.
-    if (!sqlFeed) await ticketReady();
-
-    // The <head> of index.html starts this exact request before the rest of
-    // the page (css, cdn scripts, this file) has even downloaded. Use it once
-    // on first load if it's for the same endpoint; reloads always refetch live.
-    const early = window.__wsAssetsPrefetch;
-    window.__wsAssetsPrefetch = null;
+    await waitForAccountAccess();
 
     // Saved copy (data cache on, and not an R refetch).
     if (cacheable && !window._forceRefetch) {
@@ -3393,22 +3408,9 @@ window.addEventListener("load", () => {
 
     if (raw === undefined) try {
       if (sqlFeed) {
-        let firstPage;
-        if (early && early.url === fetchUrl && early.promise) {
-          try { firstPage = await early.promise; } catch (_) { firstPage = undefined; }
-        }
-        raw = await fetchSqlAssets(fetchUrl, firstPage);
+        raw = await fetchSqlAssets(fetchUrl);
       } else {
-        if (early && early.url === fetchUrl && early.promise) {
-          try {
-            raw = await Promise.race([
-              early.promise,
-              new Promise((_, reject) => setTimeout(() => reject(new Error("prefetch timed out")), 12000)),
-            ]);
-          } catch (_) { raw = undefined; }
-          if (isRefusal(raw)) raw = undefined;
-        }
-        if (raw === undefined) raw = await fetchJSONRetry(() => bustCache(fetchUrl));
+        raw = await fetchJSONRetry(() => bustCache(fetchUrl));
       }
 
       // A stored ticket the server no longer accepts (revoked or removed in
@@ -3533,6 +3535,12 @@ window.addEventListener("load", () => {
     // route (404/405/501) or no connection hands the slot back, so a broken
     // endpoint can't use up the day's 15.
     async request() {
+      if (window.WS_ACCOUNTS_ENABLED !== false) {
+        if (!window.WS_Ticket?.approved()) {
+          return { status: "unauthorized", remaining: this.remaining(), detail: "sign in first" };
+        }
+        await waitForAccountAccess();
+      }
       const url = window.WS_ENDPOINTS?.rebuild;
       if (!url) return { status: "disabled", remaining: this.remaining(), detail: "no rebuild endpoint set" };
       const calls = _rebuildCalls();
@@ -3566,6 +3574,11 @@ window.addEventListener("load", () => {
 
   window.reloadAssets = async function () {
     if (window._reloading) return;
+    if (window.WS_ACCOUNTS_ENABLED !== false && !window.WS_Ticket?.approved()) {
+      window.showToast?.("Sign in before reloading the library.");
+      return false;
+    }
+    await waitForAccountAccess();
     window._reloading          = true;
     window._pageRestored       = false;
     window._placeholderRunning = false;

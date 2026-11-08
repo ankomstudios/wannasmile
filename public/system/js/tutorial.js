@@ -405,13 +405,14 @@
     });
 
     const problem = () => {
-      const usernameIssue = usernameProblem(name.value.trim());
-      if (usernameIssue) return usernameIssue;
       if (mode === "register") {
+        const usernameIssue = usernameProblem(name.value.trim());
+        if (usernameIssue) return usernameIssue;
         const address = email.value.trim();
         if (!address || address.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) return "Enter a valid email address.";
         if (!pass.value || pass.value.length < 8) return "Passwords are at least 8 characters.";
-      } else if (!pass.value) return "Enter your password.";
+      } else if (!name.value.trim()) return "Enter your username.";
+      if (!pass.value) return "Enter your password.";
       return "";
     };
 

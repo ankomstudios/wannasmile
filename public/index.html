@@ -30,25 +30,13 @@
 <script src="system/js/wordfilter.js"></script>
 
 <script>
-// Start the public SQL asset fetch now, while styles and scripts load.
+// Configure the SQL asset source, but defer library requests until main.js
+// verifies that this browser has an approved account session.
 (function () {
   window.WS_SHEET_URL = window.WS_ENDPOINTS.library;   // consumed by main.js
   try {
     window._devBuildArmedAtLoad = localStorage.getItem("ws_devBuildArmed") === "true";
-    var url = window.WS_SHEET_URL;
-    var requestUrl = new URL(url, location.href);
-    requestUrl.searchParams.set("_", String(Date.now()));
-    var controller = new AbortController();
-    var timeout = setTimeout(function () { controller.abort(); }, 12000);
-    var p = fetch(requestUrl.href, { cache: "no-store", signal: controller.signal })
-      .then(function (r) {
-        if (!r.ok) throw new Error("HTTP " + r.status);
-        return r.json();
-      })
-      .finally(function () { clearTimeout(timeout); });
-    p.catch(function () {}); // handled by loadAssets; silences "unhandled rejection" if unused
-    window.__wsAssetsPrefetch = { url: url, promise: p };
-  } catch (_) { window.__wsAssetsPrefetch = null; }
+  } catch (_) { window._devBuildArmedAtLoad = false; }
 })();
 </script>
 
@@ -367,10 +355,10 @@
 <script defer src="system/js/profile-modal.js?v=account-role-shields"></script>
 <script defer src="system/js/msgcore.js?v=2.4.0-public-profiles"></script>
 <script defer src="system/js/settings.js?v=theme-fallback-favicon"></script>
-<script defer src="system/js/ui.js"></script>
+<script defer src="system/js/ui.js?v=account-gated-library"></script>
 <script defer src="system/js/stickers.js"></script>
 <script defer src="system/js/quotes.js"></script>
-<script defer src="system/js/main.js?v=2.4.0-public-profiles"></script>
+<script defer src="system/js/main.js?v=account-gated-library"></script>
 <script defer src="system/js/boom.js"></script>
 <script defer src="system/js/panic.js"></script>
 <script defer src="system/js/shortcuts.js"></script>
@@ -383,7 +371,7 @@
 <script defer src="system/js/gridSettings.js"></script>
 <script defer src="system/js/credits.js"></script>
 <script defer src="system/js/devtools.js"></script>
-<script defer src="system/js/tutorial.js?v=login-no-email-verification"></script>
+<script defer src="system/js/tutorial.js?v=legacy-login-validation"></script>
 <script defer src="system/js/daily.js"></script>
 <script defer src="system/js/version.js"></script>
 
