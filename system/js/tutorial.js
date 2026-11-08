@@ -385,7 +385,7 @@
           <input id="wstAccountPass" name="password" type="password" maxlength="128" autocomplete="${mode === "register" ? "new-password" : "current-password"}" required />
           <label class="wst-check"><input id="wstAccountShow" type="checkbox" /> Show password</label>
         </form>
-        <p class="wst-note wst-account-note">Email is not verified; it is only checked to prevent reuse. Password recovery is not available yet. Your account ID is not a password.</p>
+        <p class="wst-note wst-account-note">Email is only used to prevent duplicate accounts; no verification is required. Password recovery is not available yet. Your account ID is not a password.</p>
         <p class="wst-alt"><button type="button" class="wst-link" data-account-mode>${mode === "register" ? "Already have an account? Sign in" : "New here? Create an account"}</button></p>`,
     });
 
@@ -434,7 +434,7 @@
           ? await T.register({ name: name.value.trim(), email: email.value.trim(), pass: pass.value })
           : await T.login({ name: name.value.trim(), pass: pass.value });
         if (result?.ok) {
-          ticketApproved(mode === "register" ? "Your WannaSmile account is ready." : "Welcome back.");
+          ticketApproved(mode === "register" ? "Your WannaSmile account is ready." : "Welcome back.", mode === "login");
           return;
         }
         err = result?.error || "That didn't work. Check your details and try again.";
@@ -879,7 +879,7 @@
 
   // Approved: gate-only closes; a first-timer goes on to whichever part of
   // step 1 is left (the profile, in ticket-first order) and then the tour.
-  function ticketApproved(msg = "Your account is ready.") {
+  function ticketApproved(msg = "Your account is ready.", signedIn = false) {
     approvedHere = true;
     stopPoll();
     spot = null;
@@ -895,7 +895,7 @@
     wireTicketBox();
     setStatus("Account connected.", true);
     if (gateOnly) {
-      if (!profileSetUp()) {
+      if (!signedIn && !profileSetUp()) {
         gateOnly = false;
         setupOnly = true;
         stepSetup();
