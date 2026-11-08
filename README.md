@@ -11,9 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="https://owo.ankomstudios.com">
-    <img src="https://img.shields.io/badge/Website-Live-red?style=flat-square&logo=googlechrome&logoColor=white" alt="Live Website">
-  </a>
+  <img src="https://img.shields.io/badge/Website-Live-red?style=flat-square&logo=googlechrome&logoColor=white" alt="Live Website">
   <img src="https://img.shields.io/badge/Version-2.4.0-red?style=flat-square&logo=github&logoColor=white" alt="Version 2.4.0">
   <img src="https://img.shields.io/github/last-commit/ankomstudios/wannasmile?style=flat-square&color=red&logo=git&logoColor=white" alt="Last Commit">
   <img src="https://img.shields.io/github/repo-size/ankomstudios/wannasmile?style=flat-square&color=red&logo=github&logoColor=white" alt="Repository Size">
