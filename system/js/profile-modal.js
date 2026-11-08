@@ -1,4 +1,4 @@
-// Homepage profile modal. The card is pages/profile-testing/ embedded in an
+// Profile modal. The card is pages/profile-testing/ embedded in an
 // iframe (?embed=1). "view" = card alone; "edit" = editor panel beside it.
 // The two buttons underneath swap: Edit/Close <-> Disregard/Save.
 (() => {
@@ -23,6 +23,7 @@
   };
   let stage = "view";
   let saving = null;
+  let publicProfile = null;
   let frameHeight = 420;
   let fxType = "none";
   let fxCount = 0;
@@ -122,6 +123,14 @@
   }
 
   function paintButtons() {
+    primary.hidden = !!publicProfile;
+    if (publicProfile) {
+      secondary.dataset.mode = "view";
+      secondary.querySelector("i").className = "fa-solid fa-xmark";
+      secondary.querySelector("span").textContent = "Close";
+      secondary.disabled = false;
+      return;
+    }
     [primary, secondary].forEach((btn, i) => {
       const [icon, text] = LABELS[stage][i];
       btn.dataset.mode = stage;
@@ -142,10 +151,15 @@
     const url = new URL(FRAME_URL);
     url.searchParams.set("embed", "1");
     url.searchParams.set("stage", "view");
+    if (publicProfile) {
+      url.searchParams.set("public", "1");
+      url.searchParams.set("username", publicProfile.username);
+    }
     frame.src = url.href;
   }
   function open() {
     window.WS_WordFilter?.load?.();
+    publicProfile = null;
     stage = "view";
     modal.dataset.stage = "view";
     frameHeight = 420;
@@ -157,6 +171,42 @@
     modal.setAttribute("aria-hidden", "false");
     primary.focus({ preventScroll: true });
   }
+  async function openPublic(username) {
+    const name = String(username || "").trim().replace(/^@/, "").toLowerCase();
+    if (!/^[a-z0-9][a-z0-9_.-]{2,19}$/.test(name)) {
+      toast("That profile could not be opened.");
+      return;
+    }
+    const endpoint = window.WS_ENDPOINTS?.chat;
+    if (!endpoint) {
+      toast("Public profiles are unavailable right now.");
+      return;
+    }
+    try {
+      const url = new URL(endpoint);
+      url.search = new URLSearchParams({ type: "publicprofile", username: name }).toString();
+      const response = await fetch(url, { cache: "no-store" });
+      const result = await response.json();
+      if (!response.ok || result?.ok !== true || !result.profile || typeof result.profile !== "object" || Array.isArray(result.profile)) {
+        throw new Error(result?.error || `HTTP ${response.status}`);
+      }
+      publicProfile = { username: name, profile: result.profile };
+      stage = "view";
+      modal.dataset.stage = "view";
+      modal.setAttribute("aria-label", `Public profile for @${name}`);
+      frameHeight = 420;
+      paintButtons();
+      fitFrame();
+      loadFrame();
+      modal.classList.add("visible");
+      document.body.classList.add("profile-modal-open");
+      modal.setAttribute("aria-hidden", "false");
+      secondary.focus({ preventScroll: true });
+    } catch (error) {
+      console.error("Could not load a public profile.", error);
+      toast(error.message || "Could not load that profile.");
+    }
+  }
   function close() {
     if (!isOpen()) return;
     modal.classList.remove("visible");
@@ -165,6 +215,8 @@
     stopEffects();
     frame.src = "about:blank";
     stage = "view";
+    publicProfile = null;
+    modal.setAttribute("aria-label", "Profile");
   }
   function disregard() {
     stage = "view";
@@ -187,7 +239,10 @@
   window.addEventListener("message", (e) => {
     if (e.source !== frame.contentWindow || e.origin !== location.origin) return;
     const d = e.data || {};
-    if (d.type === "ws-profile-modal-ready") card.dataset.loading = "false";
+    if (d.type === "ws-profile-modal-ready") {
+      if (publicProfile) post({ type: "ws-public-profile", username: publicProfile.username, profile: publicProfile.profile });
+      else card.dataset.loading = "false";
+    } else if (d.type === "ws-public-profile-ready" && publicProfile) card.dataset.loading = "false";
     else if (d.type === "ws-profile-modal-size") {
       if (Number.isFinite(d.height) && d.height > 0) frameHeight = d.height;
       fitFrame();
@@ -196,7 +251,19 @@
     } else if (d.type === "ws-profile-modal-saved") {
       clearTimeout(saving); saving = null;
       setStage("view");
-      toast("✅ Profile saved.");
+      let profile;
+      try { profile = JSON.parse(localStorage.getItem("ws_profile_style_main") || "null"); }
+      catch (error) { console.error("Could not read the saved public profile.", error); }
+      if (!profile || !window.WS_Msg?.publishPublicProfile) {
+        toast("Profile saved locally, but it could not be published to global chat.");
+      } else {
+        window.WS_Msg.publishPublicProfile(profile).then((result) => {
+          toast(result.ok ? "Profile saved and published to global chat." : `Profile saved locally. ${result.error}`);
+        }).catch((error) => {
+          console.error("Could not publish the saved profile.", error);
+          toast("Profile saved locally, but publishing it failed.");
+        });
+      }
     } else if (d.type === "ws-profile-modal-close") {
       stage === "edit" ? disregard() : close();
     }
@@ -218,5 +285,6 @@
   window.visualViewport?.addEventListener("resize", fitFrame);
 
   window.openProfileOverlay = open;
+  window.openPublicProfileOverlay = openPublic;
   window.closeProfileOverlay = close;
 })();

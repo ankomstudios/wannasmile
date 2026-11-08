@@ -41,7 +41,7 @@
   const K = {
     id: "ws_ticket_id", key: "ws_ticket_key", status: "ws_ticket_status", user: "ws_username",
     seen: "ws_chat_seen", notified: "ws_msg_notified", state: "ws_msg_state", pollAt: "ws_msg_poll",
-    profiles: "ws_chat_profiles", sig: "ws_msg_profile_sig",
+    profiles: "ws_chat_profiles", sig: "ws_msg_profile_sig", publicSig: "ws_public_profile_sig",
   };
   const NAME_RE = /^[a-z0-9][a-z0-9_.\-]{2,19}$/;
 
@@ -231,6 +231,37 @@
   // 50x50 WebP here; the server re-checks type, size and the real pixel size.
   let syncing = false;
   const hash = (str) => { let h = 5381; for (let i = 0; i < str.length; i++) h = ((h * 33) ^ str.charCodeAt(i)) >>> 0; return h.toString(36); };
+
+  async function publishPublicProfile(profile) {
+    if (!active()) return { ok: false, error: "Sign in to publish your profile to global chat." };
+    let encoded;
+    try { encoded = JSON.stringify(profile); }
+    catch (error) {
+      console.error("[WS_Msg] Could not serialize the public profile:", error);
+      return { ok: false, error: "The profile could not be published." };
+    }
+    if (!profile || typeof profile !== "object" || Array.isArray(profile) || typeof encoded !== "string" || encoded.length > 60000) {
+      return { ok: false, error: "The profile is invalid or too large to publish." };
+    }
+    const result = await post("profile", { action: "public_save", profile });
+    if (!result || result.ok !== true) return { ok: false, error: result?.error || "The profile could not be published." };
+    write(K.publicSig, hash(myName() + "\n" + encoded));
+    return { ok: true };
+  }
+
+  async function syncSavedPublicProfile() {
+    const raw = read("ws_profile_style_main");
+    if (!raw) return;
+    let profile;
+    try { profile = JSON.parse(raw); }
+    catch (error) {
+      console.error("[WS_Msg] Saved profile data is invalid and was not published:", error);
+      return;
+    }
+    if (read(K.publicSig) === hash(myName() + "\n" + JSON.stringify(profile))) return;
+    const result = await publishPublicProfile(profile);
+    if (!result.ok) console.error("[WS_Msg] Public profile sync failed:", result.error);
+  }
 
   async function syncProfile() {
     if (!active() || syncing) return;
@@ -694,6 +725,7 @@
     if (loadShared()) render();
     if (!IS_CHAT_PAGE) poll(true);
     setTimeout(syncProfile, 3500);     // only posts when the picture/nickname changed (signature in ws_msg_profile_sig)
+    setTimeout(syncSavedPublicProfile, 3500);
 
     document.addEventListener("visibilitychange", () => {
       if (!document.hidden) { if (!IS_CHAT_PAGE) poll(false); settle(); }
@@ -705,6 +737,7 @@
     // Another tab read a conversation, polled, or changed the profile.
     window.addEventListener("storage", (e) => {
       if (e.key === K.state) { if (loadShared()) render(); }
+      else if (e.key === "ws_profile_style_main") syncSavedPublicProfile();
       else if (e.key === K.seen) { S.cards.forEach((el, key) => { const n = el.dataset.wsFrom; const f = S.friends.find((x) => x.name === n); if (key.startsWith("m:") && f && f.last && f.last.ts <= (seen()[n] || 0)) dropCard(key); }); render(); }
       else if (e.key === K.profiles) { S.profiles = json(K.profiles, S.profiles); refreshAvatars(); emit(); }
       else if (e.key === K.status && e.newValue !== "approved") { S.dead = true; S.friends = []; S.typing.clear(); render(); }
@@ -713,7 +746,7 @@
   }
 
   window.WS_Msg = {
-    ingest, markSeen, avatar, refreshAvatars, displayName, sendTyping, syncProfile,
+    ingest, markSeen, avatar, refreshAvatars, displayName, sendTyping, syncProfile, publishPublicProfile,
     isTyping, typingText, summaryTyping,
     unread: () => unreadFriends().map((f) => f.name),
     me: () => myName(),

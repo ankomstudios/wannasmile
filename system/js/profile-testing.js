@@ -2,8 +2,9 @@
 
 "use strict";
 const EMBEDDED_PROFILE = new URLSearchParams(location.search).get("embed") === "1";
+const PUBLIC_PROFILE = new URLSearchParams(location.search).get("public") === "1";
 if (EMBEDDED_PROFILE) {
-  document.getElementById("profilePanelIntro").textContent = "Pick a section to edit it. Save Profile applies your changes to the live profile.";
+  document.getElementById("profilePanelIntro").textContent = "Saved profiles are public to global-chat users.";
 }
 const KEY = EMBEDDED_PROFILE ? "ws_profile_style_modal_draft" : "ws_profile_style_test";
 const MAIN_PROFILE_KEY = "ws_profile_style_main";
@@ -51,6 +52,59 @@ const FALLBACK_ACH = {
   adventurist:{"metadata-title":"Adventurist","image-url":"https://placehold.co/64x64/8a80ff/111111.png?text=A"}
 };
 const $ = (id) => document.getElementById(id);
+let publicProfileName = "";
+const PUBLIC_PROFILE_FONTS = new Set([
+  "ui-monospace,Menlo,Consolas,monospace", "Georgia,serif", "'Comic Sans MS','Comic Neue',cursive",
+  "Impact,Haettenschweiler,sans-serif", "'Brush Script MT',cursive", "system-ui,sans-serif",
+]);
+const PUBLIC_PROFILE_MEDIA = new Set(["bimg", "bimgMedia", "pimg", "pframe", "pwrapper", "npImg", "cbImg"]);
+const PUBLIC_PROFILE_COLORS = new Set([
+  "divColor", "bc1", "bc2", "qColor", "nc", "pwrapperColor", "pfpBorderColor", "bannerTint",
+]);
+const PUBLIC_PROFILE_TOKENS = new Set([
+  "divStyle", "divFill", "fx_t", "statusMode", "pwrapperMode", "pfpAlign", "pfpBorderMode",
+  "npKind", "npId", "npFit", "npAnim", "cbType", "cbAnim", "cbRepeat",
+]);
+function normalizePublicProfile(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Invalid profile data.");
+  const profile = { ...DEF };
+  Object.keys(DEF).forEach((key) => {
+    if (!(key in value)) return;
+    const item = value[key];
+    if (key === "roles" || key === "ach") {
+      if (Array.isArray(item)) profile[key] = item.filter((entry) => typeof entry === "string")
+        .slice(0, key === "roles" ? 12 : 20).map((entry) => entry.replace(/[\u0000-\u001f\u007f]/g, "").slice(0, 100));
+      return;
+    }
+    if (typeof item !== typeof DEF[key]) return;
+    if (typeof item === "number") {
+      if (Number.isFinite(item)) profile[key] = Math.max(-1000, Math.min(1000, item));
+    } else if (typeof item === "boolean") profile[key] = item;
+    else if (typeof item === "string") {
+      const text = item.replace(/[\u0000-\u001f\u007f]/g, "").slice(0, PUBLIC_PROFILE_MEDIA.has(key) ? 50000 : 1000);
+      if (PUBLIC_PROFILE_MEDIA.has(key)) {
+        if (!text) profile[key] = "";
+        else if (/^data:image\/(?:png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/i.test(text)) profile[key] = text;
+        else {
+          try {
+            const url = new URL(text);
+            if (url.protocol === "https:") profile[key] = url.href;
+          } catch (_) {}
+        }
+      } else if (PUBLIC_PROFILE_COLORS.has(key)) {
+        if (/^#[0-9a-f]{3,8}$/i.test(text)) profile[key] = text;
+      } else if (key === "nf") {
+        if (PUBLIC_PROFILE_FONTS.has(text)) profile[key] = text;
+      } else if (PUBLIC_PROFILE_TOKENS.has(key)) {
+        if (/^[a-z0-9_-]{1,40}$/i.test(text)) profile[key] = text;
+      } else profile[key] = text;
+    }
+  });
+  profile.bioText = profile.bioText.slice(0, 500);
+  profile.nm = profile.nm.slice(0, 24);
+  profile.qText = profile.qText.slice(0, 80);
+  return profile;
+}
 const DIVIDER_ASSETS = {
   drip: "https://raw.githubusercontent.com/securlydetected/assets/refs/heads/main/dividers/dripping-paint.png",
   xmaslights: "https://raw.githubusercontent.com/securlydetected/assets/refs/heads/main/dividers/xmaslights.png"
@@ -672,7 +726,7 @@ function paint() {
     frame.classList.remove("visible");
   }
   const n = $("name");
-  n.textContent = S.nm || ls("nickname") || "Your Name";
+  n.textContent = S.nm || (PUBLIC_PROFILE ? publicProfileName : ls("nickname")) || "Your Name";
   n.style.cssText = `font-family:${S.nf};font-size:${S.ns}px;color:${S.nc};font-weight:${S.nb ? 700 : 400};font-style:${S.ni ? "italic" : "normal"};-webkit-text-stroke:${S.no}px #000;paint-order:stroke fill`;
   const bodyRect = $("body").getBoundingClientRect();
   const actionsRect = $("profileActions").getBoundingClientRect();
@@ -877,6 +931,22 @@ function bindProfilePreview() {
       const data = event.data || {};
       if (data.type === "ws-profile-modal-stage") applyStage(data.stage);
       else if (data.type === "ws-profile-modal-action" && data.action === "save") saveToMainProfile();
+      else if (data.type === "ws-public-profile" && PUBLIC_PROFILE) {
+        try {
+          S = normalizePublicProfile(data.profile);
+          S.achDemo = true;
+          publicProfileName = String(data.username || "").trim().replace(/^@/, "").toLowerCase();
+          if (!/^[a-z0-9][a-z0-9_.-]{2,19}$/.test(publicProfileName)) throw new Error("Invalid profile username.");
+          viewingSavedProfile = true;
+          document.documentElement.dataset.publicProfile = publicProfileName;
+          setViewMode(true);
+          syncProfileEditorFields();
+          toHost("ws-public-profile-ready");
+        } catch (error) {
+          console.error("Could not display the public profile.", error);
+          toHost("ws-profile-modal-close");
+        }
+      }
     });
     window.addEventListener("load", () => {
       applyStage(initialStage);

@@ -455,6 +455,7 @@ code{padding:0 4px;border-radius:4px;background:rgba(255,255,255,.1);font-size:1
 :root.profile-embedded #editSidebar{align-self:stretch;max-height:100%;min-height:0}
 :root.profile-embedded main{min-height:0;max-height:100%;overscroll-behavior:contain}
 :root.profile-embedded #profileActions .profile-action{display:none}
+:root.profile-embedded[data-public-profile] #profileMore{display:none!important}
 :root.profile-embedded[data-pf-stage="view"] #addRoleButton,
 :root.profile-embedded[data-pf-stage="view"] #roleComposer,
 :root.profile-embedded[data-pf-stage="view"] .profile-role-list button{display:none!important}

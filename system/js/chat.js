@@ -14,8 +14,8 @@
 //  • GLOBAL CHAT: a room pinned at the top of the list that every account
 //    can read and post in, no friend request needed (GET &room=global,
 //    POST send {room:"global"}). It's how
-//    people meet: click anyone's name or picture in it to add them as a
-//    friend, then talk privately. It's the pseudo-conversation GLOBAL
+//    people meet: click anyone's name or picture to view their profile, add
+//    them as a friend, then talk privately. It's the pseudo-conversation GLOBAL
 //    ("#global") in state.active; a real username can never start with "#".
 //  • msgcore.js (WS_Msg) is shared with the rest of the site. This page hands
 //    it every poll answer; in return it supplies profile pictures and display
@@ -524,8 +524,8 @@
       const mine = m.from === state.me;
       // A new run starts for a different sender or after a pause.
       if (!grp || !prev || prev.from !== m.from || m.ts - prev.ts > GROUP_GAP_MS) {
-        // In global chat, other people's names and pictures open a small menu
-        // (add friend / message) so strangers can connect.
+        // In global chat, other people's names and pictures open a menu for
+        // viewing their profile and connecting with them.
         const person = (node) => (inGlobal() && !mine
           ? el("button", { class: "who-btn", type: "button", title: "@" + m.from, "aria-label": "Options for " + shown(m.from), onclick: (e) => showUserMenu(m.from, e.currentTarget) }, node)
           : node);
@@ -578,6 +578,10 @@
     menu.textContent = "";
     menu.append(
       el("div", { class: "um-head" }, avatar(name, "sm"), el("span", { class: "um-who" }, nameTag("b", name), el("small", { text: "@" + name }))),
+      el("button", { class: "btn ghost sm", type: "button", onclick: go(() => {
+        if (typeof window.openPublicProfileOverlay === "function") window.openPublicProfileOverlay(name);
+        else toast("Public profiles are unavailable right now.");
+      }) }, icon("fa-solid fa-id-card"), " View profile"),
       action
     );
     menu.dataset.for = name;
