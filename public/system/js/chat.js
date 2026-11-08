@@ -12,8 +12,9 @@
 //    The newest 60 messages per friendship are kept; older ones are deleted
 //    by the server as new ones arrive.
 //  • GLOBAL CHAT: a room pinned at the top of the list that every account
-//    can read and post in, no friend request needed (GET &room=global,
-//    POST send {room:"global"}). It's how
+//    can read and post in, no friend request needed.
+//  • TESTER CHAT: a private room available only to accounts with the tester
+//    badge (GET &room=tester, POST send {room:"tester"}).
 //    people meet: click anyone's name or picture to view their profile, add
 //    them as a friend, then talk privately. It's the pseudo-conversation GLOBAL
 //    ("#global") in state.active; a real username can never start with "#".
@@ -32,17 +33,19 @@
   const read = (k) => { try { return localStorage.getItem(k) || ""; } catch (_) { return ""; } };
   const NAME_RE  = /^[a-z0-9][a-z0-9_.\-]{2,19}$/;
   const MAX_TEXT = 500;
+  const MAX_GIF_URL = 2048;
   const POLL_MS  = 4000;      // tab in front (short, so "typing" shows up while it's happening)
   const SLOW_MS  = 30000;     // tab hidden
   const MAX_BACKOFF = 60000;
   const TYPING_PING_MS = 3000;   // how often "I'm typing" is sent while a draft is being written
   const GROUP_GAP_MS = 5 * 60000; // messages from one person closer than this share one avatar/name
   const GLOBAL = "#global";       // the global room, in place of a friend's username in state.active
+  const TESTER = "#tester";       // tester-only room; never accepted as a real username
 
   const state = {
-    me: "", friends: [], active: "", messages: [], rev: "", grev: "", max: 60, globalOff: false,
+    me: "", friends: [], active: "", messages: [], rev: "", grev: "", trev: "", max: 60, globalOff: false,
     loading: false, again: false, fails: 0, timer: 0, dead: false, sending: false,
-    wanted: "", replyTo: null, rolesByName: Object.create(null), // #with=<name> still waiting for the friend list
+    wanted: "", replyTo: null, composerMedia: null, rolesByName: Object.create(null), // #with=<name> still waiting for the friend list
     lastPing: 0,
   };
 
@@ -50,6 +53,8 @@
   const cleanName = (v) => String(v || "").trim().replace(/^@/, "").toLowerCase();
   const visibleNow = () => document.visibilityState === "visible" && document.hasFocus();
   const inGlobal = () => state.active === GLOBAL;
+  const inTester = () => state.active === TESTER;
+  const inSharedRoom = () => inGlobal() || inTester();
   function openPublicProfile(name) {
     if (typeof window.openPublicProfileOverlay === "function") window.openPublicProfileOverlay(name);
     else toast("Public profiles are unavailable right now.");
@@ -61,14 +66,137 @@
     bar.hidden = !target;
     if (!target) return;
     $("replyComposerName").textContent = target.unavailable ? "Original message unavailable" : shown(target.from);
-    $("replyComposerText").textContent = target.unavailable ? "" : target.text;
+    $("replyComposerText").textContent = target.unavailable ? "" : target.text || mediaLabel(target.media, target.gifUrl);
   }
   function setReplyTarget(message) {
     state.replyTo = message && Number.isSafeInteger(Number(message.id)) && Number(message.id) > 0
-      ? { id: Number(message.id), from: message.from, text: message.text, unavailable: !!message.unavailable }
+      ? { id: Number(message.id), from: message.from, text: message.text, gifUrl: message.gifUrl || "", media: message.media || null, unavailable: !!message.unavailable }
       : null;
     renderReplyComposer();
     $("msg").focus({ preventScroll: true });
+  }
+
+  function normalizeGifUrl(value) {
+    const raw = String(value || "").trim();
+    if (!raw || raw.length > MAX_GIF_URL) return "";
+    let url;
+    try { url = new URL(raw); } catch (_) { return ""; }
+    if (url.protocol !== "https:" || url.username || url.password || url.port) return "";
+    const host = url.hostname.toLowerCase();
+    if (host === "giphy.com" || host === "www.giphy.com") {
+      const parts = url.pathname.split("/").filter(Boolean);
+      if (parts[0] !== "gifs" || parts.length !== 2) return "";
+      const id = parts[1].split("-").pop();
+      if (!/^[a-z0-9]{6,20}$/i.test(id)) return "";
+      return `https://media.giphy.com/media/${id}/giphy.gif`;
+    }
+    if (!/\.(?:gif|webp|png|jpe?g)$/i.test(url.pathname)) return "";
+    url.hash = "";
+    return url.href.length <= MAX_GIF_URL ? url.href : "";
+  }
+
+  function mediaLabel(media, legacyGifUrl) {
+    if (media) return media.title || ({ image: "Image or GIF", video: "Video", audio: "Audio", youtube: "YouTube video", spotify: "Spotify", link: "Web link" }[media.kind] || "Media");
+    return legacyGifUrl ? "GIF" : "";
+  }
+
+  function normalizeMedia(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+    const raw = String(value.url || "").trim();
+    if (!raw || raw.length > MAX_GIF_URL) return null;
+    let url;
+    try { url = new URL(raw); } catch (_) { return null; }
+    if (url.protocol !== "https:" || url.username || url.password || url.port) return null;
+    const kind = String(value.kind || "");
+    if (kind === "youtube") {
+      if (!["youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be", "youtube-nocookie.com", "www.youtube-nocookie.com"].includes(url.hostname.toLowerCase())) return null;
+      const id = url.hostname.toLowerCase() === "youtu.be" ? url.pathname.split("/").filter(Boolean)[0]
+        : url.pathname === "/watch" ? url.searchParams.get("v") : url.pathname.split("/").filter(Boolean).pop();
+      if (!/^[\w-]{11}$/.test(id || "")) return null;
+      return { kind, url: `https://www.youtube-nocookie.com/embed/${id}`, title: String(value.title || "").slice(0, 120) };
+    }
+    if (kind === "spotify") {
+      if (!["open.spotify.com", "spotify.com", "www.spotify.com"].includes(url.hostname.toLowerCase())) return null;
+      const path = url.pathname.split("/").filter(Boolean);
+      if (/^intl-[a-z]{2}(?:-[a-z]{2})?$/i.test(path[0] || "")) path.shift();
+      if (path[0] === "embed") path.shift();
+      const [type, id] = path;
+      if (!["track", "album", "playlist", "episode", "show"].includes(type) || !/^[A-Za-z0-9]{10,64}$/.test(id || "")) return null;
+      return { kind, url: `https://open.spotify.com/embed/${type}/${id}`, title: String(value.title || "").slice(0, 120) };
+    }
+    if (kind === "image" || kind === "video" || kind === "audio") {
+      const ext = url.pathname.split(".").pop().toLowerCase();
+      const valid = kind === "image" ? /^(?:gif|webp|png|jpe?g|avif)$/ : kind === "video" ? /^(?:mp4|webm)$/ : /^(?:mp3|m4a|ogg|wav|aac)$/;
+      if (!valid.test(ext)) return null;
+      url.hash = "";
+      return { kind, url: url.href, title: String(value.title || "").slice(0, 120) };
+    }
+    if (kind === "link") {
+      url.hash = "";
+      return { kind, url: url.href, title: String(value.title || url.hostname).slice(0, 120) };
+    }
+    return null;
+  }
+
+  function mediaFromInput(value) {
+    const raw = String(value || "").trim();
+    if (!raw || raw.length > MAX_GIF_URL) return null;
+    return normalizeMedia({ kind: "spotify", url: raw });
+  }
+
+  function spotifyMediaFromText(text) {
+    const links = String(text || "").match(/https?:\/\/(?:open\.|www\.)?spotify\.com\/[^\s<>]+/gi) || [];
+    for (const link of links) {
+      const cleaned = link.replace(/[)\]},.!?;:]+$/, "");
+      const media = mediaFromInput(cleaned);
+      if (media) return media;
+    }
+    return null;
+  }
+
+  function closeMediaPicker(restoreFocus) {
+    $("mediaPicker").hidden = true;
+    document.documentElement.classList.remove("media-picker-open");
+    $("mediaBtn").setAttribute("aria-expanded", "false");
+    if (restoreFocus) $("mediaBtn").focus({ preventScroll: true });
+  }
+
+  function openMediaPicker() {
+    $("mediaPicker").hidden = false;
+    document.documentElement.classList.add("media-picker-open");
+    $("mediaBtn").setAttribute("aria-expanded", "true");
+    $("spotifyLinkInput").focus({ preventScroll: true });
+    renderMediaPane();
+  }
+
+  function renderMediaPane(message, className) {
+    const results = $("mediaResults");
+    results.textContent = "";
+    const media = mediaFromInput($("spotifyLinkInput").value);
+    if (media) {
+      results.append(el("div", { class: "media-state", role: "status", text: "Spotify link ready. It will appear as a playable player in chat." }));
+    } else if (message) {
+      results.append(el("div", { class: "media-state" + (className ? ` ${className}` : ""), role: "status", text: message }));
+    } else {
+      results.append(el("div", { class: "media-state", text: "Share a Spotify track, album, playlist, episode, or show. Links pasted in a message are embedded automatically too." }));
+    }
+  }
+
+  function mediaPreview(media) {
+    if (!media) return null;
+    return el("span", { class: "media-attachment-icon", text: media.kind === "spotify" ? "Spotify" : media.kind === "youtube" ? "YouTube" : media.kind.toUpperCase() });
+  }
+
+  function paintMediaAttachment() {
+    const bar = $("mediaAttachment");
+    const preview = $("mediaAttachmentPreview");
+    bar.hidden = !state.composerMedia;
+    preview.textContent = "";
+    if (state.composerMedia) {
+      const content = mediaPreview(state.composerMedia);
+      if (content) preview.append(content);
+      bar.querySelector(".media-attachment-label").textContent = mediaLabel(state.composerMedia);
+    }
   }
 
   // Same small DOM helper everywhere; all user text goes in through
@@ -135,7 +263,7 @@
   // Only counts as read while the conversation is really in front of the person;
   // a message that lands in a hidden tab stays unread (and notifies).
   function markActiveSeen() {
-    if (!state.active || inGlobal() || !visibleNow()) return;
+    if (!state.active || inSharedRoom() || !visibleNow()) return;
     const last = state.messages[state.messages.length - 1];
     if (!last || last.pending) return;
     if (M) M.markSeen(state.active, last.ts); else markSeenLocal(state.active, last.ts);
@@ -147,8 +275,9 @@
   async function get(extra) {
     const qs = new URLSearchParams({ type: "chat", ...creds(), ...extra, _: Date.now() });
     const res = await fetch(`${API}?${qs}`, { cache: "no-store" });
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    return res.json();
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error || "HTTP " + res.status);
+    return data;
   }
 
   async function post(action, extra) {
@@ -196,12 +325,25 @@
     try {
       const data = await get(asked === GLOBAL
         ? { room: "global", rev: force ? "" : state.rev, grev: force ? "" : state.grev }
-        : { with: asked, rev: force ? "" : state.rev });
+        : asked === TESTER
+          ? { room: "tester", rev: force ? "" : state.rev, trev: force ? "" : state.trev }
+          : { with: asked, rev: force ? "" : state.rev });
       state.fails = 0;
 
       if (!data || data.ok !== true) {
         if (data && (data.code === "account" || data.error === "Ticket required.")) {
           return gate("Sign in to chat", "Create an account or sign in on the WannaSmile homepage, then return here.", "Go to WannaSmile");
+        }
+        if (asked === TESTER && data && data.code === "tester_role") {
+          state.active = "";
+          state.messages = [];
+          state.rev = "";
+          state.trev = "";
+          if (M) M.setViewing("");
+          toast("The tester channel is only available to tester accounts.");
+          renderFriends();
+          renderConversation();
+          return;
         }
         throw new Error((data && data.error) || "Unexpected reply");
       }
@@ -210,6 +352,7 @@
       paintMe();
       state.rev = data.rev || state.rev;
       state.grev = data.grev || state.grev;
+      state.trev = data.trev || state.trev;
       net("live", "Live");
       const previousRoles = roleMapSignature(state.rolesByName);
       if (data.roleNames && typeof data.roleNames === "object" && !Array.isArray(data.roleNames)) {
@@ -229,27 +372,32 @@
       if (previousRoles !== roleMapSignature(state.rolesByName)) {
         paintMe();
         refreshNames();
-        if (inGlobal()) renderThread(false);
+        renderFriends();
+        if (inSharedRoom()) renderThread(false);
       }
       // Typing flags ride on every answer, even "unchanged" ones.
-      if (M) M.ingest(data, { viewing: inGlobal() ? "" : state.active });
+      if (M) M.ingest(data, { viewing: inSharedRoom() ? "" : state.active });
       if (data.unchanged) return;
+      if (asked !== state.active) return;
 
       state.max = data.max || 60;
       state.friends = Array.isArray(data.friends) ? data.friends : [];
-      if (inGlobal()) {
+      if (inSharedRoom()) {
         // An answer meant for another conversation (the person switched while it
         // was in flight) is skipped; the refresh queued by open() follows it.
-        if (asked === GLOBAL) {
-          // A missing global room indicates an unexpected Worker response.
-          state.globalOff = !data.global;
-          if (data.global) {
-            state.max = data.global.max || 120;
+        if (asked === GLOBAL || asked === TESTER) {
+          const roomData = asked === GLOBAL ? data.global : data.tester;
+          if (asked === GLOBAL) state.globalOff = !roomData;
+          if (roomData) {
+            state.max = roomData.max || 120;
             // Oldest first; equal timestamps keep the order the server listed them (stable sort).
-            const listed = (data.global.messages || []).map((m, i) => ({ m, i })).sort((a, b) => ((a.m.ts || 0) - (b.m.ts || 0)) || (a.i - b.i)).map((x) => x.m);
+            const listed = (roomData.messages || []).map((m, i) => ({ m, i })).sort((a, b) => ((a.m.ts || 0) - (b.m.ts || 0)) || (a.i - b.i)).map((x) => x.m);
             const pending = state.sending ? state.messages.filter((m) => m.pending) : [];
-            state.messages = listed.concat(pending.filter((p) => !listed.some((m) => m.from === p.from && m.text === p.text && m.ts >= p.ts - 60000)));
+            state.messages = listed.concat(pending.filter((p) => !listed.some((m) =>
+              m.from === p.from && m.text === p.text && (m.media?.url || m.gifUrl || "") === (p.media?.url || p.gifUrl || "") && m.ts >= p.ts - 60000)));
             if (state.messages.length > state.max) state.messages = state.messages.slice(-state.max);
+          } else if (asked === TESTER) {
+            throw new Error("The tester channel could not be loaded.");
           }
         }
       } else if (state.active && !state.friends.some((f) => f.name === state.active && f.status === "friend")) {
@@ -261,7 +409,8 @@
         // (the 60 s allowance covers a clock that is a little off).
         const listed = data.messages || [];
         const pending = state.sending ? state.messages.filter((m) => m.pending) : [];
-        state.messages = listed.concat(pending.filter((p) => !listed.some((m) => m.from === p.from && m.text === p.text && m.ts >= p.ts - 60000)));
+        state.messages = listed.concat(pending.filter((p) => !listed.some((m) =>
+          m.from === p.from && m.text === p.text && (m.media?.url || m.gifUrl || "") === (p.media?.url || p.gifUrl || "") && m.ts >= p.ts - 60000)));
         markActiveSeen();
       }
       openWanted();
@@ -319,16 +468,22 @@
   });
 
   function open(name) {
+    if (state.active !== name && state.composerMedia) {
+      state.composerMedia = null;
+      paintMediaAttachment();
+    }
     state.active = name;
     state.messages = [];
     state.replyTo = null;
     renderReplyComposer();
     state.rev = "";
+    state.grev = "";
+    state.trev = "";
     state.lastPing = 0;
     closeUserMenu();
     paintDockPlate();
     $("chat").classList.add("open");
-    if (M) M.setViewing(name === GLOBAL ? "" : name);
+    if (M) M.setViewing(name === GLOBAL || name === TESTER ? "" : name);
     renderFriends();
     renderConversation();
     refresh(true);
@@ -341,6 +496,8 @@
     state.replyTo = null;
     renderReplyComposer();
     state.rev = "";
+    state.grev = "";
+    state.trev = "";
     paintDockPlate();
     if (M) M.setViewing("");
     $("chat").classList.remove("open");
@@ -391,39 +548,56 @@
     else toast(`@${n} isn't one of your friends yet.`);
   }
 
+  function sendMedia(value) {
+    const media = normalizeMedia(value);
+    if (!media) return toast("That media link is not supported.");
+    state.composerMedia = media;
+    paintMediaAttachment();
+    closeMediaPicker(false);
+    if (!state.active) return toast("Open a conversation before sending media.");
+    send();
+  }
+
   async function send() {
     const box = $("msg");
     const text = box.value.trim();
-    if (!text || !state.active || state.sending) return;
-    const room = inGlobal();
+    const media = state.composerMedia || spotifyMediaFromText(text);
+    const gifUrl = media && media.kind === "image" ? normalizeGifUrl(media.url) : "";
+    if ((!text && !media) || !state.active || state.sending) return;
     // Global chat is public, so it gets the same word filter as nicknames and
     // ticket reasons (wordfilter.js; checked here, in the browser).
-    if (room && window.WS_WordFilter && window.WS_WordFilter.find(text)) {
+    if (inGlobal() && text && window.WS_WordFilter && window.WS_WordFilter.find(text)) {
       return toast("Something in that message isn't allowed in global chat. Try rewording it.");
     }
     state.sending = true;
     const to = state.active;
     const replyTo = state.replyTo;
     box.value = "";
+    state.composerMedia = null;
+    paintMediaAttachment();
     state.lastPing = 0;
     updateCount();
     autosize();
     const tmp = {
-      from: state.me, text, ts: Date.now(), pending: true,
-      replyTo: replyTo ? { id: replyTo.id, from: replyTo.from, text: replyTo.text, unavailable: replyTo.unavailable } : null,
+      from: state.me, text, gifUrl, media, ts: Date.now(), pending: true,
+      replyTo: replyTo ? { id: replyTo.id, from: replyTo.from, text: replyTo.text, gifUrl: replyTo.gifUrl, media: replyTo.media || null, unavailable: replyTo.unavailable } : null,
     };
     state.replyTo = null;
     renderReplyComposer();
     state.messages.push(tmp);
     renderThread(true);
     try {
-      const payload = room ? { room: "global", text } : { to, text };
+      const payload = inGlobal() ? { room: "global", text, media, gifUrl }
+        : inTester() ? { room: "tester", text, media, gifUrl }
+          : { to, text, media, gifUrl };
       if (replyTo) payload.replyTo = replyTo.id;
       const r = await post("send", payload);
       if (!r || r.ok !== true) throw new Error((r && r.error) || "Couldn't send that.");
     } catch (err) {
       state.messages = state.messages.filter((m) => m !== tmp);
       if (!box.value) box.value = text;
+      if (!state.composerMedia) state.composerMedia = media;
+      paintMediaAttachment();
       if (replyTo && state.active === to && !state.replyTo) state.replyTo = replyTo;
       renderReplyComposer();
       updateCount();
@@ -436,6 +610,36 @@
   }
 
   $("composer").addEventListener("submit", (e) => { e.preventDefault(); send(); });
+  $("mediaBtn").addEventListener("click", openMediaPicker);
+  $("mediaClose").addEventListener("click", () => closeMediaPicker(true));
+  $("mediaPicker").addEventListener("click", (event) => {
+    if (event.target === $("mediaPicker")) closeMediaPicker(true);
+  });
+  $("spotifyLinkInput").addEventListener("input", () => {
+    renderMediaPane();
+  });
+  $("spotifyLinkInput").addEventListener("keydown", (event) => {
+    if (event.key === "Escape") { closeMediaPicker(true); return; }
+    if (event.key === "Enter") {
+      event.preventDefault();
+      shareSpotifyLink();
+    }
+  });
+  $("shareSpotifyLink").addEventListener("click", shareSpotifyLink);
+  $("clearSpotifyLink").addEventListener("click", () => {
+    $("spotifyLinkInput").value = "";
+    renderMediaPane();
+    $("spotifyLinkInput").focus({ preventScroll: true });
+  });
+  function shareSpotifyLink() {
+    const media = mediaFromInput($("spotifyLinkInput").value);
+    if (media) sendMedia(media);
+    else renderMediaPane("That is not a supported Spotify link. Paste a track, album, playlist, episode, or show URL.", "media-picker-error");
+  }
+  $("removeMedia").addEventListener("click", () => {
+    state.composerMedia = null;
+    paintMediaAttachment();
+  });
   $("cancelReply").addEventListener("click", () => setReplyTarget(null));
   $("msg").addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); }
@@ -445,7 +649,7 @@
     // Real typing: tell the friend while there's an unsent draft, at most every few seconds.
     if (!$("msg").value.trim()) { state.lastPing = 0; return; }
     const now = Date.now();
-    if (M && state.active && !inGlobal() && now - state.lastPing >= TYPING_PING_MS) {
+    if (M && state.active && !inSharedRoom() && now - state.lastPing >= TYPING_PING_MS) {
       state.lastPing = now;
       M.sendTyping(state.active);
     }
@@ -665,6 +869,12 @@
       el("span", { class: "ws-av global-av", "aria-hidden": "true" }, icon("fa-solid fa-earth-americas")),
       el("span", { class: "tx" }, el("span", { class: "nm", text: "Global chat" }), el("span", { class: "pv", text: "Everyone with an account · no friend request needed" }))
     ));
+    if (isRoleAccount(state.me, "tester")) {
+      list.append(el("button", { class: "conv-row tester" + (inTester() ? " on" : ""), type: "button", onclick: () => open(TESTER) },
+        el("span", { class: "ws-av tester-av", "aria-hidden": "true" }, icon("fa-solid fa-user-shield")),
+        el("span", { class: "tx" }, el("span", { class: "nm", text: "Tester channel" }), el("span", { class: "pv", text: "Private to tester-role accounts" }))
+      ));
+    }
 
     if (incoming.length) {
       list.append(el("div", { class: "group", text: `Requests (${incoming.length})` }));
@@ -685,7 +895,10 @@
     for (const f of friends) {
       const unread = !!f.last && f.last.from !== state.me && f.last.ts > (s[f.name] || 0) && !(f.name === state.active && visibleNow());
       const typing = isTyping(f.name);
-      const preview = typing ? typingLine(f.name) : f.last ? (f.last.from === state.me ? "You: " : "") + f.last.text : "No messages yet";
+      const lastText = f.last && (f.last.media || f.last.gifUrl
+        ? f.last.text ? `${mediaLabel(f.last.media, f.last.gifUrl)}: ${f.last.text}` : mediaLabel(f.last.media, f.last.gifUrl)
+        : f.last.text);
+      const preview = typing ? typingLine(f.name) : f.last ? (f.last.from === state.me ? "You: " : "") + lastText : "No messages yet";
       list.append(el("button", { class: "conv-row" + (f.name === state.active ? " on" : "") + (unread ? " unread" : ""), type: "button", onclick: () => open(f.name) },
         avatar(f.name),
         el("span", { class: "tx" }, nameTag("span", f.name, "nm"), el("span", { class: "pv" + (typing ? " typing" : ""), text: preview })),
@@ -706,7 +919,7 @@
     list.scrollTop = keep;
   }
 
-  const peerTitle = () => (inGlobal() ? "Global chat" : shown(state.active));
+  const peerTitle = () => inGlobal() ? "Global chat" : inTester() ? "Tester channel" : shown(state.active);
 
   function renderConversation() {
     const on = !!state.active;
@@ -717,17 +930,23 @@
     if (holder.dataset.for !== state.active) {
       holder.dataset.for = state.active;
       holder.textContent = "";
-      holder.append(inGlobal() ? el("span", { class: "ws-av global-av" }, icon("fa-solid fa-earth-americas")) : avatar(state.active));
+      holder.append(inGlobal()
+        ? el("span", { class: "ws-av global-av" }, icon("fa-solid fa-earth-americas"))
+        : inTester()
+          ? el("span", { class: "ws-av tester-av" }, icon("fa-solid fa-user-shield"))
+          : avatar(state.active));
     }
     $("peer").textContent = peerTitle();
     const peerProfileButton = $("peerProfileButton");
-    peerProfileButton.disabled = inGlobal();
-    peerProfileButton.setAttribute("aria-label", inGlobal() ? "Global chat" : `View @${state.active}'s profile`);
-    peerProfileButton.title = inGlobal() ? "" : `View @${state.active}'s profile`;
-    $("removeBtn").hidden = inGlobal();
-    $("msg").placeholder = inGlobal() ? "Message everyone… (Enter to send)" : "Message… (Enter to send)";
+    peerProfileButton.disabled = inSharedRoom();
+    peerProfileButton.setAttribute("aria-label", inSharedRoom() ? peerTitle() : `View @${state.active}'s profile`);
+    peerProfileButton.title = inSharedRoom() ? "" : `View @${state.active}'s profile`;
+    $("removeBtn").hidden = inSharedRoom();
+    $("msg").placeholder = inGlobal() ? "Message everyone… (Enter to send)" : inTester() ? "Message testers… (Enter to send)" : "Message… (Enter to send)";
     $("keepNote").textContent = inGlobal()
       ? `global chat is open to everyone with an account · only the latest ${state.max} messages are kept`
+      : inTester()
+        ? `Only tester-role accounts can read or post here · latest ${state.max} messages are kept`
       : `only the latest ${state.max} messages are kept`;
     paintTyping();
     renderThread(false);
@@ -737,11 +956,11 @@
   function paintTyping() {
     const row = $("typingRow");
     const sub = $("peerSub");
-    const on = !!state.active && !inGlobal() && isTyping(state.active);
+    const on = !!state.active && !inSharedRoom() && isTyping(state.active);
     const line = on ? typingLine(state.active) : "";
     if (sub) {
       sub.className = on ? "typing" : "";
-      sub.textContent = on ? line : inGlobal() ? "Everyone with an account can read and post here" : state.active ? "@" + state.active : "";
+      sub.textContent = on ? line : inGlobal() ? "Everyone with an account can read and post here" : inTester() ? "Private tester channel" : state.active ? "@" + state.active : "";
     }
     if (!row) return;
     if (!on) { if (row.firstChild) row.textContent = ""; return; }
@@ -763,7 +982,9 @@
     if (!n) {
       box.append(el("div", { class: "empty", text: state.globalOff && inGlobal()
         ? "Global chat is unavailable right now. Try again in a moment."
-        : inGlobal() ? "Nobody has said anything yet. Say hi to everyone!" : `Say hi to ${shown(state.active)}!` }));
+        : inGlobal() ? "Nobody has said anything yet. Say hi to everyone!"
+          : inTester() ? "No tester messages yet. Start the conversation."
+            : `Say hi to ${shown(state.active)}!` }));
       return;
     }
     if (n >= state.max) box.append(el("div", { class: "note", text: "Older messages are deleted automatically to keep the latest " + state.max + "." }));
@@ -795,9 +1016,11 @@
       if (m.replyTo) {
         body.append(m.replyTo.unavailable
           ? el("div", { class: "reply-quote" }, el("b", { text: "Original message" }), el("span", { text: "This message is no longer available" }))
-          : el("div", { class: "reply-quote" }, el("b", { text: shown(m.replyTo.from) }), el("span", { text: m.replyTo.text })));
+          : el("div", { class: "reply-quote" }, el("b", { text: shown(m.replyTo.from) }), el("span", { text: m.replyTo.text || mediaLabel(m.replyTo.media, m.replyTo.gifUrl) })));
       }
-      body.append(el("div", { class: "bubble" + (m.pending ? " pending" : ""), title: m.pending ? "" : fmtTime(m.ts), text: m.text }));
+      const media = normalizeMedia(m.media) || (normalizeGifUrl(m.gifUrl) ? { kind: "image", url: normalizeGifUrl(m.gifUrl) } : null);
+      if (media) body.append(renderMessageMedia(media));
+      if (m.text) body.append(el("div", { class: "bubble" + (m.pending ? " pending" : ""), title: m.pending ? "" : fmtTime(m.ts), text: m.text }));
       const replyButton = el("button", {
         class: "message-reply", type: "button", title: "Reply to this message",
         "aria-label": `Reply to ${shown(m.from)}'s message`, hidden: !m.id || m.pending,
@@ -805,6 +1028,51 @@
       }, icon("fa-solid fa-reply"));
       stack.append(el("div", { class: "message-line" }, body, replyButton));
       prev = m;
+    }
+
+    function renderMessageMedia(media) {
+      const frame = el("div", { class: `shared-media shared-media-${media.kind}` });
+      const fallback = () => {
+        frame.textContent = "";
+        frame.append(el("span", { class: "gif-failed", text: "Media unavailable" }));
+      };
+      if (media.kind === "image") {
+        const image = el("img", {
+          class: "chat-gif", src: media.url, alt: media.title || "Shared image or GIF",
+          loading: "lazy", decoding: "async", referrerpolicy: "no-referrer",
+        });
+        image.addEventListener("error", fallback, { once: true });
+        frame.append(image);
+      } else if (media.kind === "video") {
+        const video = el("video", { controls: true, preload: "metadata", playsinline: true, referrerpolicy: "no-referrer" });
+        video.src = media.url;
+        video.addEventListener("error", fallback, { once: true });
+        frame.append(video);
+      } else if (media.kind === "audio") {
+        const audio = el("audio", { controls: true, preload: "metadata" });
+        audio.src = media.url;
+        audio.addEventListener("error", fallback, { once: true });
+        frame.append(audio);
+      } else if (media.kind === "youtube" || media.kind === "spotify") {
+        const iframe = el("iframe", {
+          src: media.url, title: media.title || (media.kind === "youtube" ? "YouTube video" : "Spotify player"),
+          loading: "lazy", referrerpolicy: "strict-origin-when-cross-origin",
+          sandbox: "allow-scripts allow-same-origin allow-presentation",
+          allow: "autoplay; encrypted-media; fullscreen; picture-in-picture",
+        });
+        frame.append(iframe);
+      } else {
+        let url;
+        try { url = new URL(media.url); } catch (_) { return frame; }
+        const anchor = el("a", {
+          href: url.href, target: "_blank", rel: "noopener noreferrer nofollow",
+          class: "shared-link",
+        }, icon("fa-solid fa-arrow-up-right-from-square"), el("span", {},
+          el("b", { text: media.title || url.hostname }),
+          el("small", { text: url.hostname })));
+        frame.append(anchor);
+      }
+      return frame;
     }
     if (inGlobal()) new Set(state.messages.map((m) => m.from)).forEach(wantPlate);
     paintPlates();
@@ -868,7 +1136,29 @@
     const m = $("userMenu");
     if (m && !m.hidden && !m.contains(e.target) && !(e.target.closest && e.target.closest(".who-btn"))) closeUserMenu();
   });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeUserMenu(); });
+  document.addEventListener("keydown", (e) => {
+    if ($("mediaPicker").hidden) {
+      if (e.key === "Escape") closeUserMenu();
+      return;
+    }
+    if (e.key === "Escape") {
+      closeMediaPicker(true);
+      e.stopPropagation();
+      return;
+    }
+    if (e.key !== "Tab") return;
+    const focusable = [...$("mediaPicker").querySelectorAll('button:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])')]
+      .filter((node) => !node.hidden);
+    if (!focusable.length) return;
+    const first = focusable[0], last = focusable[focusable.length - 1];
+    if (e.shiftKey && (document.activeElement === first || !$("mediaPicker").contains(document.activeElement))) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && (document.activeElement === last || !$("mediaPicker").contains(document.activeElement))) {
+      e.preventDefault();
+      first.focus();
+    }
+  });
   window.addEventListener("resize", closeUserMenu);
   $("thread").addEventListener("scroll", closeUserMenu, { passive: true });
 

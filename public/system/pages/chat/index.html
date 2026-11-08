@@ -32,6 +32,7 @@ body {
 a { color: inherit; }
 button, input, textarea { font: inherit; color: inherit; }
 [hidden] { display: none !important; }
+.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 
 /* ── Top bar ── */
 .topbar {
@@ -131,6 +132,7 @@ input[type="text"]:focus, textarea:focus { border-color: var(--accent-color, #f4
 div.conv-row { cursor: default; }
 .conv-row:hover { background: rgba(255,255,255,0.06); }
 .conv-row.on { background: rgba(255,255,255,0.12); border-left-color: var(--accent-color, #f44); }
+.conv-row.tester .tester-av { color:#d5c9ff; border-color:#8c78d8; background:rgba(98,82,168,.24); }
 .conv-row .tx { flex: 1; min-width: 0; }
 .conv-row .nm { display: block; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .conv-row .pv { display: block; font-size: 0.74rem; opacity: 0.7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
@@ -196,6 +198,18 @@ div.conv-row { cursor: default; }
 @media (hover:none) { .message-reply { opacity:.8; } }
 .bubble.pending { opacity: 0.6; }
 .bubble[title] { cursor: default; }
+.media-message { width:min(420px,100%); overflow:hidden; border:1px solid rgba(255,255,255,.16); border-radius:12px; background:rgba(0,0,0,.26); }
+.media-message img,.media-message video { display:block; max-width:100%; max-height:320px; margin:auto; object-fit:contain; }
+.media-message audio { display:block; width:min(360px,100%); }
+.media-message iframe { display:block; width:100%; height:240px; border:0; background:#111; }
+.media-message.spotify iframe { height:152px; }
+.media-message.youtube iframe { aspect-ratio:16/9; height:auto; }
+.media-caption { padding:8px 10px; white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.4; font-size:.84rem; }
+.media-failed { padding:10px 12px; font-size:.8rem; opacity:.8; }
+.media-link { display:flex; flex-direction:column; gap:5px; padding:12px; text-decoration:none; overflow-wrap:anywhere; }
+.media-link:hover { background:rgba(255,255,255,.06); }
+.media-link b { font-size:.86rem; }
+.media-link span { font-size:.7rem; opacity:.72; }
 .who-btn { background: none; border: 0; padding: 0; margin: 0; color: inherit; font: inherit; cursor: pointer; display: inline-flex; align-items: center; }
 .ws-name-text { display:inline; }
 .ws-bot-shield { display:inline-flex; align-items:center; justify-content:center; margin-left:5px; padding:1px 5px 2px; min-height:15px; background:#5865f2; color:#fff; clip-path:polygon(15% 0,85% 0,100% 20%,94% 76%,50% 100%,6% 76%,0 20%); font:800 9px/1 monospace; letter-spacing:.1px; vertical-align:middle; }
@@ -221,6 +235,40 @@ div.conv-row { cursor: default; }
 .composer-wrap { flex: none; padding: 8px 14px 10px; border-top: 1px solid rgba(255,255,255,0.12); }
 .composer { display: flex; gap: 8px; align-items: flex-end; }
 .composer textarea { resize: none; min-height: 40px; max-height: 120px; }
+.media-picker { position:fixed; z-index:10000; inset:0; display:grid; place-items:center; padding:18px; background:rgba(0,0,0,.78); }
+.media-picker[hidden] { display:none; }
+.media-dialog { display:flex; flex-direction:column; width:min(600px,100%); height:auto; max-height:min(480px,92dvh); overflow:hidden; border:1px solid rgba(255,255,255,.18); border-radius:18px; background:#171719; box-shadow:0 22px 70px rgba(0,0,0,.62); font-family:system-ui,sans-serif; }
+.media-linkbar { display:flex; align-items:center; gap:12px; padding:16px 16px 10px; }
+.media-close { flex:none; width:40px; height:40px; border:0; border-radius:50%; background:transparent; color:inherit; font-size:1.05rem; cursor:pointer; }
+.media-close:hover { background:rgba(255,255,255,.1); }
+.media-link-input { min-width:0; flex:1; height:42px; padding:0 14px; border:1px solid #525256; border-radius:10px; background:#252528; font:600 .92rem system-ui,sans-serif; }
+.media-link-input:focus-visible { border-color:#ffd400; outline:2px solid #ffd400; outline-offset:2px; }
+.media-clear { flex:none; padding:6px; border:0; background:none; color:inherit; font-weight:bold; cursor:pointer; }
+.media-share-button { display:inline-flex; flex:none; align-items:center; justify-content:center; gap:7px; height:42px; padding:0 14px; border:0; border-radius:10px; background:#ffd400; color:#111; font:700 .85rem system-ui,sans-serif; cursor:pointer; }
+.media-share-button:hover { background:#ffe14a; }
+.media-close:focus-visible,.media-clear:focus-visible,.media-share-button:focus-visible { outline:2px solid #ffd400; outline-offset:2px; }
+.media-picker-note { padding:2px 20px 0; color:rgba(255,255,255,.82); font: .82rem/1.5 system-ui,sans-serif; }
+.media-results { flex:1; min-height:100px; overflow-y:auto; padding:8px 20px 20px; scrollbar-width:thin; overscroll-behavior:contain; }
+.media-state { padding:16px 8px; text-align:center; font:.84rem/1.5 system-ui,sans-serif; color:rgba(255,255,255,.82); }
+.media-picker-error { color:#ffb4ab; }
+.media-picker-open { overflow:hidden; }
+.media-attachment { display:flex; align-items:center; gap:8px; width:max-content; max-width:100%; margin-bottom:8px; padding:5px 8px; border:1px solid rgba(255,255,255,.2); border-radius:8px; background:rgba(255,255,255,.06); font-size:.75rem; }
+.media-attachment[hidden] { display:none; }
+.media-attachment-preview { width:40px; height:32px; overflow:hidden; border-radius:4px; }
+.media-attachment button { flex:none; width:26px; height:26px; border:0; border-radius:50%; background:transparent; color:inherit; cursor:pointer; }
+.media-attachment button:hover { background:rgba(255,255,255,.12); }
+.media-attachment-icon { display:grid; place-items:center; width:40px; height:32px; border-radius:4px; background:#343438; color:#fff; font:700 .58rem system-ui,sans-serif; }
+.shared-media { max-width:min(420px,100%); margin:4px 0; overflow:hidden; }
+.shared-media img,.shared-media video { display:block; max-width:100%; max-height:340px; border-radius:10px; }
+.shared-media video { width:min(420px,100%); background:#080808; }
+.shared-media audio { display:block; width:min(360px,100%); }
+.shared-media-youtube iframe { display:block; width:min(420px,100%); aspect-ratio:16/9; border:0; border-radius:10px; background:#080808; }
+.shared-media-spotify iframe { display:block; width:min(420px,100%); height:152px; border:0; border-radius:10px; background:#080808; }
+.shared-link { display:flex; align-items:center; gap:12px; min-height:60px; padding:12px 14px; border:1px solid rgba(255,255,255,.22); border-radius:10px; background:rgba(255,255,255,.06); text-decoration:none; }
+.shared-link > span { display:grid; gap:3px; min-width:0; }
+.shared-link b,.shared-link small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.shared-link small { color:rgba(255,255,255,.7); }
+.shared-link:hover { border-color:#ffd400; }
 .count { font-size: 0.66rem; opacity: 0.55; margin-top: 4px; }
 
 @media (max-width: 760px) {
@@ -231,6 +279,14 @@ div.conv-row { cursor: default; }
   #backBtn { display: inline-flex; }
   .grp { max-width: 94%; }
   .back span { display: none; }
+  .media-picker { padding:12px; }
+  .media-dialog { width:100%; max-height:calc(100dvh - 24px); border-radius:16px; }
+  .media-linkbar { gap:8px; padding:12px 12px 8px; }
+  .media-close { width:36px; height:36px; }
+  .media-link-input { padding:0 10px; font-size:.82rem; }
+  .media-share-button { padding:0 10px; }
+  .media-picker-note { padding-inline:16px; }
+  .media-results { padding-inline:16px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .status.sync::before, .ws-dots i { animation: none; }
@@ -313,11 +369,17 @@ body.profile-modal-open { overflow: hidden; backdrop-filter: none; -webkit-backd
         <div class="thread" id="thread" role="log" aria-live="polite"></div>
         <div class="typing-row" id="typingRow" role="status" aria-live="polite"></div>
         <div class="composer-wrap">
+          <div class="media-attachment" id="mediaAttachment" hidden>
+            <span class="media-attachment-preview" id="mediaAttachmentPreview"></span>
+            <span class="media-attachment-label">Media attached</span>
+            <button type="button" id="removeMedia" aria-label="Remove attached media"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+          </div>
           <div class="reply-composer" id="replyComposer" role="status" hidden>
             <span class="reply-copy"><b id="replyComposerName"></b><span id="replyComposerText"></span></span>
             <button type="button" class="reply-cancel" id="cancelReply" aria-label="Cancel reply"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
           </div>
           <form class="composer" id="composer" autocomplete="off">
+            <button class="btn ghost" id="mediaBtn" type="button" title="Share media" aria-haspopup="dialog" aria-expanded="false"><i class="fa-regular fa-images" aria-hidden="true"></i> Media</button>
             <textarea id="msg" rows="1" maxlength="500" placeholder="Message… (Enter to send)" aria-label="Message"></textarea>
             <button class="btn" id="sendBtn" type="submit"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Send</button>
           </form>
@@ -328,6 +390,19 @@ body.profile-modal-open { overflow: hidden; backdrop-filter: none; -webkit-backd
   </div>
 </div>
 <div class="user-menu" id="userMenu" hidden></div>
+<div class="media-picker" id="mediaPicker" hidden>
+  <section class="media-dialog" role="dialog" aria-modal="true" aria-labelledby="mediaTitle">
+    <h2 id="mediaTitle" class="sr-only">Share media</h2>
+    <div class="media-linkbar">
+      <button class="media-close" id="mediaClose" type="button" aria-label="Close media picker"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+      <input class="media-link-input" id="spotifyLinkInput" type="url" inputmode="url" autocomplete="url" placeholder="Paste a Spotify link" aria-label="Spotify link" />
+      <button class="media-clear" id="clearSpotifyLink" type="button">Clear</button>
+      <button class="media-share-button" id="shareSpotifyLink" type="button"><i class="fa-brands fa-spotify" aria-hidden="true"></i> Share</button>
+    </div>
+    <div class="media-picker-note" id="mediaPickerNote">Spotify tracks, albums, playlists, episodes, and shows embed with playback controls. You can also paste a Spotify link directly into a message.</div>
+    <div class="media-results" id="mediaResults" role="status" aria-live="polite"></div>
+  </section>
+</div>
 <div id="profileModal" class="pfm" role="dialog" aria-modal="true" aria-label="Profile" aria-hidden="true" data-stage="view" tabindex="-1">
   <div class="pfm-stage">
     <div class="pfm-card" id="profileModalCard" data-loading="true">
@@ -347,6 +422,6 @@ body.profile-modal-open { overflow: hidden; backdrop-filter: none; -webkit-backd
 <script src="../../js/cursors.js"></script>
 <script src="../../js/msgcore.js?v=account-profile-isolation-2"></script>
 <script src="../../js/profile-modal.js?v=profile-text-alignment-1"></script>
-<script src="../../js/chat.js?v=profile-replies-v1"></script>
+<script src="../../js/chat.js?v=spotify-embed-v1"></script>
 </body>
 </html>
