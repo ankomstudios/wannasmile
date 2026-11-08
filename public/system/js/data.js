@@ -292,6 +292,7 @@
     // profile.js's real keys (profileNickname/profilePfp above are older
     // names), plus the tutorial flag so a cleared visitor gets the tour again.
     "nickname", "profilePic", "pfpPixelated", "profileBanner", "pfpAlign", "pfpFrame", "pfpShape", "pfpWrapper", "pfpWrapperOpacity", "pfAdvancedEdit", "ws_profile_setup",
+    "ws_profile_style_main", "ws_profile_style_modal_draft", "ws_profile_style_test",
     "ws_tutorial_version",
     // Early access (main.js): which tester assets were already announced,
     // and the list kept for the credits page.
@@ -309,13 +310,28 @@
       ? await window.WSRuSure.ask({
           title:   "R u Sure?",
           body:    "clearing your data removes your favorites, saved profile, banner, and etc!",
-          keep:    "your account stays signed in; your account ID and credits are kept",
+          keep:    "your account stays signed in; your account ID and credits are kept. Your public profile styling will also be reset.",
           cancel:  "no take me back!",
           confirm: "yes clear data",
           danger:  true,
         })
-      : window.confirm("Clear all your saved data?\n\nYour account stays signed in; your account ID and credits are kept.\n\nThis cannot be undone.");
+      : window.confirm("Clear all your saved data?\n\nYour account stays signed in; your account ID and credits are kept. Public profile styling will also be reset.\n\nThis cannot be undone.");
     if (!confirmed) return;
+
+    let publicProfileReset = "not-requested";
+    if (window.WS_Ticket?.status() === "approved") {
+      publicProfileReset = "failed";
+      try {
+        if (typeof window.WS_Msg?.publishPublicProfile !== "function") {
+          throw new Error("The Global Chat profile service is unavailable.");
+        }
+        const result = await window.WS_Msg.publishPublicProfile({});
+        if (!result?.ok) throw new Error(result?.error || "The public profile could not be reset.");
+        publicProfileReset = "done";
+      } catch (error) {
+        console.error("Could not reset the public profile styling.", error);
+      }
+    }
 
     CLEARABLE_KEYS.forEach(k => localStorage.removeItem(k));
     try { indexedDB.deleteDatabase("ws_library"); } catch (_) {}   // saved library file (main.js)
@@ -336,7 +352,14 @@
       // theme anyway, since the "theme" key is gone.)
     } catch {}
 
-    if (typeof showToast === "function") showToast("🗑️ Data cleared. Reloading…");
+    if (typeof showToast === "function") {
+      const message = publicProfileReset === "done"
+        ? "Data cleared. Profile styling reset. Reloading…"
+        : publicProfileReset === "failed"
+          ? "Local data cleared, but public profile styling could not be reset. Reloading…"
+          : "Local data cleared. Sign in to reset public profile styling. Reloading…";
+      showToast(message);
+    }
     setTimeout(() => location.reload(), 1200);
   }
 

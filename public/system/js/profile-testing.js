@@ -675,9 +675,8 @@ function paint() {
   const bannerHeight = Number(S.bh);
   banner.style.height = `${bannerHeight}px`;
   st.setProperty("--profile-banner-height", `${bannerHeight}px`);
-  banner.style.backgroundImage = bannerUrl.trim()
-    ? `url("${escapeCssUrl(bannerUrl.trim())}")`
-    : `linear-gradient(120deg,color-mix(in srgb,${S.bannerTint || S.divColor} 34%,#8a8172),#4a4543 58%,#292b2e)`;
+  banner.style.backgroundImage = bannerUrl.trim() ? `url("${escapeCssUrl(bannerUrl.trim())}")` : "none";
+  banner.style.backgroundColor = bannerUrl.trim() ? "transparent" : (S.bannerTint || S.divColor || "#ff4444");
   banner.style.backgroundSize = bannerUrl.trim() ? "cover" : "";
   banner.style.backgroundPosition = bannerUrl.trim() ? "center" : "";
   banner.style.backgroundRepeat = bannerUrl.trim() ? "no-repeat" : "";
