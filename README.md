@@ -1,4 +1,4 @@
-![WannaSmile Banner](nexus.png)
+![WannaSmile Banner](public/nexus.png)
 
 <h1 align="center">𝕨𝕒𝕟𝕟𝕒𝕤𝕞𝕚𝕝𝕖: 𝕟𝕖𝕩𝕦𝕤</h1>
 
@@ -83,7 +83,7 @@ WannaSmile is distributed at [owo.ankomstudios.com](https://owo.ankomstudios.com
 
 ### Open source and contributions
 
-The project source is released under the [MIT License](LICENSE). Third-party components retain their own licenses and notices. WannaSmile combines a JavaScript front end, SQL-backed library services, and JSON catalogs and data. The live site's deployment and configuration are specific to our domain and services, so a direct repository fork should not be expected to run as a working copy of WannaSmile or serve the live domain without setting up its own infrastructure and configuration.
+The project source is released under the [MIT License](LICENSE). Third-party components retain their own licenses and notices. The `public/` directory contains the files served by Cloudflare Pages. The root `wrangler.jsonc` configures Wrangler to publish that directory; backend services and domains remain specific to this deployment.
 
 You are welcome to use the source as a starting point for your own project, or contribute improvements to the existing codebase. If you want to run your own version, configure your own domain, services, and deployment.
 
@@ -94,20 +94,31 @@ git clone https://github.com/ankomstudios/wannasmile.git
 cd wannasmile
 ```
 
-Open `index.html` in VS Code and use a local development server to test changes. Some features depend on external services and may require configured endpoints and access permissions.
+Install Node.js, then start a local Cloudflare Pages preview from the repository root:
+
+```bash
+npx wrangler pages dev public
+```
+
+Some features depend on the production API and other external services. Configure your own backend and domain before adapting those features for a fork.
+
+To publish this repository's site to its Cloudflare Pages project:
+
+```bash
+npx wrangler pages deploy public --project-name=owo --branch=main
+```
 
 ## 𝕣𝕖𝕡𝕠𝕤𝕚𝕥𝕠𝕣𝕪 𝕤𝕥𝕣𝕦𝕔𝕥𝕦𝕣𝕖
 
 | Path | Purpose |
 |---|---|
-| `assets/` | Images, icons, and other static assets |
-| `documentation/` | Project documentation |
-| `system/` | Core stylesheets, scripts, and supporting resources |
-| `workflows/` | Workflow-related project files |
-| `.github/workflows/` | GitHub Actions workflows |
-| `index.html` | Main website entry point |
-| `system/js/endpoints.js` | API endpoints and local catalog loading |
-| `version.json` | Version and update metadata |
+| `public/` | Static files published by Cloudflare Pages |
+| `public/system/` | Core stylesheets, scripts, pages, and supporting resources |
+| `public/index.html` | Main website entry point |
+| `public/system/js/endpoints.js` | API endpoints and local catalog loading |
+| `public/version.json` | Version and update metadata |
+| `wrangler.jsonc` | Wrangler Pages project and build-output configuration |
+| `.github/` | Repository funding and GitHub metadata |
 
 ---
 
@@ -128,15 +139,15 @@ WannaSmile4Evr is an evolving project. Features, pages, and integrations may cha
 </p>
 
 <p align="center">
-  <a href="https://ankomstudios.com">
-    <img src="ankomstudios.png" alt="Ankom Studios" width="180">
-  </a>
-</p>
-
-<p align="center">
   <a href="https://github.com/ankomstudios">GitHub Profile</a>
   &nbsp;·&nbsp;
   <a href="https://github.com/ankomstudios/wannasmile">Source Code</a>
   &nbsp;·&nbsp;
   <a href="https://owo.ankomstudios.com">Live Website</a>
+</p>
+
+<p align="center">
+  <a href="https://ankomstudios.com">
+    <img src="public/ankomstudios.png" alt="Ankom Studios" width="180">
+  </a>
 </p>

@@ -34,3 +34,7 @@ lol.txt
 *.obj
 
 /packages/
+
+# Wrangler and npm local development state.
+.wrangler/
+node_modules/
