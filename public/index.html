@@ -251,7 +251,7 @@
     <header class="ws-admin-head">
       <div>
         <h2 id="adminBotTitle">Bot profile editor</h2>
-        <p>Generate a validated D1 statement, then review and run it in Cloudflare D1.</p>
+        <p>Save managed bot profiles directly, or generate a D1 statement for manual review.</p>
       </div>
       <button type="button" id="closeAdminBots" class="ws-admin-close" aria-label="Close admin tools">&times;</button>
     </header>
@@ -261,6 +261,7 @@
     <textarea id="adminBotProfile" rows="12" spellcheck="false" aria-describedby="adminBotStatus"></textarea>
     <div class="ws-admin-actions">
       <button type="button" id="reloadAdminBots">Reload profiles</button>
+      <button type="button" id="saveBotProfile" disabled>Save bot profile</button>
       <button type="button" id="generateBotSql">Generate D1 SQL</button>
     </div>
     <p id="adminBotStatus" class="ws-admin-status" role="status" aria-live="polite"></p>
@@ -345,7 +346,7 @@
 <script defer src="system/js/datacache.js"></script>
 <script defer src="system/js/paging.js"></script>
 <script defer src="system/js/ticket.js?v=account-role-shields"></script>
-<script defer src="system/js/admin-panel.js?v=admin-hierarchy"></script>
+<script defer src="system/js/admin-panel.js?v=managed-bot-profile-save"></script>
 <script defer src="system/js/themify.js?v=theme-fallback-favicon"></script>
 <script defer src="system/js/frames.js"></script>
 <script defer src="system/js/wrappers.js"></script>

@@ -201,7 +201,10 @@ function readEmbeddedProfileState() {
     pwrapperOpacity: numberSetting("pfpWrapperOpacity", 100),
   };
 }
-if (EMBEDDED_PROFILE) {
+if (PUBLIC_PROFILE) {
+  S = { ...DEF };
+  storedState = {};
+} else if (EMBEDDED_PROFILE) {
   S = readEmbeddedProfileState();
   storedState = { ...S };
 } else {

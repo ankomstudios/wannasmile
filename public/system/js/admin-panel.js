@@ -10,6 +10,7 @@
   const sqlOutput = document.getElementById("adminBotSql");
   const status = document.getElementById("adminBotStatus");
   const copyButton = document.getElementById("copyBotSql");
+  const saveButton = document.getElementById("saveBotProfile");
   const bots = new Map();
   let isAdmin = false;
   let checkSequence = 0;
@@ -90,6 +91,7 @@
     profileInput.value = bot ? JSON.stringify(bot.profile, null, 2) : "{}";
     sqlOutput.value = "";
     copyButton.disabled = true;
+    saveButton.disabled = !bot;
   }
 
   async function loadBots() {
@@ -139,6 +141,34 @@
     } catch (error) {
       showStatus(error.message || "Could not reload bot profiles.", true);
       console.error("[admin] Could not reload managed bots.", error);
+    }
+  });
+  saveButton.addEventListener("click", async () => {
+    const username = select.value;
+    if (!username || !bots.has(username)) {
+      showStatus("There are no managed bots to edit.", true);
+      return;
+    }
+    const bot = bots.get(username);
+    try {
+      const profile = JSON.parse(profileInput.value);
+      if (!profile || typeof profile !== "object" || Array.isArray(profile)) {
+        throw new Error("Profile JSON must be an object.");
+      }
+      saveButton.disabled = true;
+      showStatus(`Saving @${username}'s profile…`);
+      const result = await api("/admin/bot-profile", "POST", { username, profile });
+      bot.profile = result.profile;
+      if (select.value === username) {
+        profileInput.value = JSON.stringify(result.profile, null, 2);
+        sqlOutput.value = "";
+        copyButton.disabled = true;
+      }
+      showStatus(`Profile saved for @${result.username}.`);
+    } catch (error) {
+      showStatus(error.message || "Could not save the bot profile.", true);
+    } finally {
+      saveButton.disabled = !bots.has(select.value);
     }
   });
   document.getElementById("generateBotSql").addEventListener("click", async () => {
