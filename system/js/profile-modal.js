@@ -1,5 +1,5 @@
 // Profile modal. The card is pages/profile-testing/ embedded in an
-// iframe (?embed=1). "view" = card alone; "edit" = editor panel beside it.
+// iframe (?embed=1). Public profiles can expand from a card preview to a full view.
 // The two buttons underneath swap: Edit/Close <-> Disregard/Save.
 (() => {
   "use strict";
@@ -40,7 +40,8 @@
   function fitFrame() {
     const viewportHeight = window.visualViewport?.height || window.innerHeight;
     const availableHeight = Math.max(160, viewportHeight - 88);
-    const requestedHeight = stage === "edit" ? viewportHeight : frameHeight;
+    const requestedHeight = stage === "edit" ? viewportHeight
+      : stage === "full" ? Math.min(availableHeight, 740) : frameHeight;
     card.style.setProperty("--pfm-h", `${Math.min(requestedHeight, availableHeight)}px`);
   }
   function resizeEffects() {
@@ -190,7 +191,12 @@
       if (!response.ok || result?.ok !== true || !result.profile || typeof result.profile !== "object" || Array.isArray(result.profile)) {
         throw new Error(result?.error || `HTTP ${response.status}`);
       }
-      publicProfile = { username: name, profile: result.profile };
+      publicProfile = {
+        username: name,
+        profile: result.profile,
+        activity: Array.isArray(result.activity) ? result.activity : [],
+        friends: Array.isArray(result.friends) ? result.friends : [],
+      };
       stage = "view";
       modal.dataset.stage = "view";
       modal.setAttribute("aria-label", `Public profile for @${name}`);
@@ -233,16 +239,23 @@
   }
 
   primary.addEventListener("click", () => (stage === "view" ? setStage("edit") : disregard()));
-  secondary.addEventListener("click", () => (stage === "view" ? close() : save()));
-  modal.addEventListener("click", (e) => { if (e.target === modal && stage === "view") close(); });
+  secondary.addEventListener("click", () => (publicProfile || stage !== "edit" ? close() : save()));
+  modal.addEventListener("click", (e) => { if (e.target === modal && stage !== "edit") close(); });
 
   window.addEventListener("message", (e) => {
     if (e.source !== frame.contentWindow || e.origin !== location.origin) return;
     const d = e.data || {};
     if (d.type === "ws-profile-modal-ready") {
-      if (publicProfile) post({ type: "ws-public-profile", username: publicProfile.username, profile: publicProfile.profile });
+      if (publicProfile) post({
+        type: "ws-public-profile",
+        username: publicProfile.username,
+        profile: publicProfile.profile,
+        activity: publicProfile.activity,
+        friends: publicProfile.friends,
+      });
       else card.dataset.loading = "false";
     } else if (d.type === "ws-public-profile-ready" && publicProfile) card.dataset.loading = "false";
+    else if (d.type === "ws-profile-modal-full" && publicProfile) setStage(d.open === false ? "view" : "full");
     else if (d.type === "ws-profile-modal-size") {
       if (Number.isFinite(d.height) && d.height > 0) frameHeight = d.height;
       fitFrame();

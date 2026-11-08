@@ -53,6 +53,9 @@ const FALLBACK_ACH = {
 };
 const $ = (id) => document.getElementById(id);
 let publicProfileName = "";
+let publicActivityData = [];
+let publicFriendsData = [];
+let publicProfileDataReady = !PUBLIC_PROFILE;
 const PUBLIC_PROFILE_FONTS = new Set([
   "ui-monospace,Menlo,Consolas,monospace", "Georgia,serif", "'Comic Sans MS','Comic Neue',cursive",
   "Impact,Haettenschweiler,sans-serif", "'Brush Script MT',cursive", "system-ui,sans-serif",
@@ -896,9 +899,7 @@ function bindProfilePreview() {
   $("saveProfileButton").addEventListener("click", saveToMainProfile);
 
   // ── Homepage modal stages ─────────────────────────────────────────────
-  // The homepage hosts this page in its profile modal and owns the buttons
-  // under the card. "view" shows only the read-only card; "edit" slides the
-  // editor panel in beside it. Everything else here is plumbing for that.
+  // The host owns the profile actions; "full" adds Activity and Friends to the preview.
   if (EMBEDDED_PROFILE) {
     const root = document.documentElement;
     const card = $("card");
@@ -909,9 +910,10 @@ function bindProfilePreview() {
     let stage = "";
     let lastHeight = 0, lastWidth = 0;
     const reportSize = () => {
+      const expanded = stage === "full";
       const editing = stage === "edit";
       const wanted = Math.ceil(shell.offsetHeight + 48);
-      const height = editing ? window.innerHeight : wanted;
+      const height = editing || expanded ? window.innerHeight : wanted;
       const width = window.innerWidth;
       if (height === lastHeight && width === lastWidth) return;
       lastHeight = height;
@@ -919,15 +921,17 @@ function bindProfilePreview() {
       toHost("ws-profile-modal-size", { height, width, stage });
     };
     const applyStage = (next) => {
-      next = next === "edit" ? "edit" : "view";
+      next = next === "edit" || next === "full" ? next : "view";
       if (next === stage) return;
       stage = next;
       root.dataset.pfStage = stage;
-      setViewMode(stage === "view");
+      setViewMode(stage !== "edit");
+      $("viewFullProfile").textContent = stage === "full" ? "Back to preview" : "View full profile";
       lastHeight = 0;
       reportSize();
     };
-    const initialStage = new URLSearchParams(location.search).get("stage") === "edit" ? "edit" : "view";
+    const queryStage = new URLSearchParams(location.search).get("stage");
+    const initialStage = queryStage === "edit" || queryStage === "full" ? queryStage : "view";
     root.dataset.pfStage = initialStage;
     if (typeof ResizeObserver === "function") {
       new ResizeObserver(reportSize).observe(shell);
@@ -945,16 +949,37 @@ function bindProfilePreview() {
           S.achDemo = true;
           publicProfileName = String(data.username || "").trim().replace(/^@/, "").toLowerCase();
           if (!/^[a-z0-9][a-z0-9_.-]{2,19}$/.test(publicProfileName)) throw new Error("Invalid profile username.");
+          publicActivityData = Array.isArray(data.activity) ? data.activity.filter((entry) =>
+            entry && typeof entry.url === "string" && Number.isFinite(entry.t) && /^https?:\/\//i.test(entry.url)
+          ).slice(0, RECENT_MAX) : [];
+          publicFriendsData = Array.isArray(data.friends) ? data.friends
+            .filter((friend) => friend && /^[a-z0-9][a-z0-9_.-]{2,19}$/i.test(String(friend.username || "")))
+            .slice(0, 90)
+            .map((friend) => {
+              const username = String(friend.username).toLowerCase();
+              return {
+                username,
+                displayName: typeof friend.displayName === "string" ? friend.displayName.slice(0, 30) : username,
+                avatar: typeof friend.avatar === "string" ? friend.avatar : "",
+              };
+            }) : [];
+          publicProfileDataReady = true;
           viewingSavedProfile = true;
           document.documentElement.dataset.publicProfile = publicProfileName;
           setViewMode(true);
           syncProfileEditorFields();
+          renderPublicFriends();
+          renderActivity();
+          if (publicActivityData.length && S.actShow) ensureLibrary();
           toHost("ws-public-profile-ready");
         } catch (error) {
           console.error("Could not display the public profile.", error);
           toHost("ws-profile-modal-close");
         }
       }
+    });
+    $("viewFullProfile").addEventListener("click", () => {
+      if (PUBLIC_PROFILE) toHost("ws-profile-modal-full", { open: stage !== "full" });
     });
     window.addEventListener("load", () => {
       applyStage(initialStage);
@@ -1199,45 +1224,63 @@ const getJson = async (name) => {
   try { const r = await fetch(`../../json/${name}.json`, { cache: "no-cache" }); if (!r.ok) throw 0; return await r.json(); }
   catch (_) { return null; }
 };
-const FRIEND_NAME_STYLES = [
-  { label: "Electric", color: "#b7f7ff", fontFamily: "system-ui,sans-serif", fontWeight: "800", letterSpacing: ".035em", textShadow: "0 0 9px rgba(49,214,255,.8)" },
-  { label: "Rose", color: "#ffd1e7", fontFamily: "Georgia,serif", fontWeight: "700", fontStyle: "italic", textShadow: "1px 2px 0 #7b214b" },
-  { label: "Sunburst", color: "#ffe39b", fontFamily: "Impact,Haettenschweiler,sans-serif", fontWeight: "700", letterSpacing: ".025em", textShadow: "1px 2px 0 #713b12" },
-  { label: "Arcade", color: "#d8ffb0", fontFamily: "ui-monospace,Menlo,Consolas,monospace", fontWeight: "700", textShadow: "1px 1px 0 #283c21" },
-  { label: "Lilac", color: "#e3d6ff", fontFamily: "system-ui,sans-serif", fontWeight: "800", fontStyle: "italic", textShadow: "0 1px 7px rgba(177,126,255,.8)" }
-];
-function shuffled(items) {
-  const result = [...items];
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [result[i], result[j]] = [result[j], result[i]];
+function renderPublicFriends() {
+  const box = $("publicFriendsList");
+  if (!box) return;
+  box.replaceChildren();
+  if (!PUBLIC_PROFILE) {
+    const empty = document.createElement("p");
+    empty.className = "profile-empty";
+    empty.textContent = "Friends with public profiles will appear here.";
+    box.append(empty);
+    return;
   }
-  return result;
-}
-function shuffleFriendsPreview() {
-  const rows = Array.from(document.querySelectorAll("[data-friend-preview]"));
-  const backgrounds = PICK.banner.items.length
-    ? PICK.banner.items
-    : PRESET_MEDIA.banner.map((item) => ({ label: item.label, url: item.value }));
-  const frames = PICK.frame.items.length
-    ? PICK.frame.items
-    : PRESET_MEDIA.frame.map((item) => ({ label: item.label, url: item.value }));
-  const avatars = shuffled(AVATARS);
-  const nameStyles = shuffled(FRIEND_NAME_STYLES);
-  rows.forEach((row, index) => {
-    const background = backgrounds[Math.floor(Math.random() * backgrounds.length)];
-    const frame = frames[Math.floor(Math.random() * frames.length)];
-    const avatar = avatars[index % avatars.length];
-    const nameStyle = nameStyles[index % nameStyles.length];
-    if (!background || !frame || !avatar || !nameStyle) return;
-    row.querySelector(".friend-plate").style.backgroundImage = `url("${escapeCssUrl(background.url)}")`;
-    row.querySelector(".profile-friend-frame").style.backgroundImage = `url("${escapeCssUrl(frame.url)}")`;
-    row.querySelector(".profile-friend-avatar img").src = avatar.url;
-    row.querySelector(".profile-friend-name").style.cssText = `color:${nameStyle.color};font-family:${nameStyle.fontFamily};font-weight:${nameStyle.fontWeight};font-style:${nameStyle.fontStyle || "normal"};letter-spacing:${nameStyle.letterSpacing || "normal"};text-shadow:${nameStyle.textShadow}`;
-    row.title = `${background.label} nameplate · ${frame.label} avatar frame · ${avatar.label} profile image · ${nameStyle.label} name style`;
+  if (!publicProfileDataReady) {
+    const loading = document.createElement("p");
+    loading.className = "profile-empty";
+    loading.textContent = "Loading friends…";
+    box.append(loading);
+    return;
+  }
+  if (!publicFriendsData.length) {
+    const empty = document.createElement("p");
+    empty.className = "profile-empty";
+    empty.textContent = "No friends with public profiles yet.";
+    box.append(empty);
+    return;
+  }
+  publicFriendsData.forEach((friend) => {
+    const row = document.createElement("article");
+    row.className = "profile-friend";
+    const avatarWrap = document.createElement("span");
+    avatarWrap.className = "profile-friend-avatar-wrap";
+    const avatar = document.createElement("span");
+    avatar.className = "profile-friend-avatar";
+    avatar.setAttribute("aria-hidden", "true");
+    const src = String(friend.avatar || "").trim();
+    if (/^https:\/\//i.test(src) || /^data:image\/(?:png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/i.test(src)) {
+      const image = document.createElement("img");
+      image.alt = "";
+      image.loading = "lazy";
+      image.referrerPolicy = "no-referrer";
+      image.src = src;
+      image.addEventListener("error", () => { avatar.textContent = (friend.displayName || friend.username || "?").charAt(0).toUpperCase(); });
+      avatar.append(image);
+    } else avatar.textContent = (friend.displayName || friend.username || "?").charAt(0).toUpperCase();
+    avatarWrap.append(avatar);
+    const meta = document.createElement("span");
+    meta.className = "profile-friend-meta";
+    const name = document.createElement("span");
+    name.className = "profile-friend-name";
+    name.textContent = friend.displayName || friend.username;
+    const username = document.createElement("small");
+    username.className = "profile-friend-note";
+    username.textContent = "@" + friend.username;
+    meta.append(name, username);
+    row.append(avatarWrap, meta);
+    box.append(row);
   });
 }
-document.querySelector("#shuffleFriendsPreview").addEventListener("click", shuffleFriendsPreview);
 function renderPick(kind) {
   const cfg = PICK[kind], box = $(cfg.el); if (!box) return;
   const q = (document.querySelector(`.pfilter[data-for="${kind}"]`)?.value || "").trim().toLowerCase();
@@ -1298,7 +1341,7 @@ async function loadCatalogs() {
     $("catNote").textContent = "Couldn't read ../../json - showing a short built-in list. Open this page from system/pages/profile-testing/ to get every library item.";
   }
   renderAllPicks();
-  shuffleFriendsPreview();
+  renderPublicFriends();
 }
 document.querySelectorAll(".pfilter").forEach((el) => el.addEventListener("input", () => renderPick(el.dataset.for)));
 ["pimg","pframe","pwrapper","bimgMedia","npImg","cbImg"].forEach((id) => $(id)?.addEventListener("input", renderAllPicks));
@@ -1753,7 +1796,7 @@ function iconUrl(raw) {
 }
 let openActMenu = null;
 function closeActMenu() { if (openActMenu) { openActMenu.remove(); openActMenu = null; } }
-function activityCard(entry, match, index) {
+function activityCard(entry, match, index, publicEntry = false) {
   const item = match?.item;
   const card = document.createElement("article");
   card.className = "act-item";
@@ -1775,18 +1818,28 @@ function activityCard(entry, match, index) {
   const t = document.createElement("div"); t.className = "act-title"; t.textContent = title; t.title = title;
   const by = document.createElement("div"); by.className = "act-by";
   by.textContent = item ? (item.author?.trim() ? `by ${item.author.trim()}` : "Library item") : `${link.host}${link.path.length > 1 ? link.path : ""}`;
+  by.hidden = publicEntry;
   const meta = document.createElement("div"); meta.className = "act-meta";
   const chip = (text, cls = "") => { const c = document.createElement("span"); c.className = `act-chip ${cls}`.trim(); c.textContent = text; meta.append(c); };
-  if (item) {
+  if (item && !publicEntry) {
     if (item.category?.trim()) chip(item.category.trim());
     if (item.sub_category?.trim()) chip(item.sub_category.trim());
     if (Number(item.rating_count) > 0) chip(`★ ${Number(item.rating_avg).toFixed(1)} (${item.rating_count})`);
     card.title = [`Matched in the SQL library (${match.how})`, item.status ? `status: ${item.status}` : "", Array.isArray(item.flags) && item.flags.length ? `flags: ${item.flags.join(", ")}` : "", item.description ? item.description : ""].filter(Boolean).join("\n");
-  } else {
+  } else if (!item) {
     chip(LIB.state === "loading" || LIB.state === "idle" ? "Matching…" : "Link", "link");
     card.title = LIB.state === "ready" ? "Not found in the SQL library" : "Library not checked yet";
   }
-  const time = document.createElement("span"); time.textContent = timeAgo(entry.t); time.dataset.t = String(entry.t); time.className = "act-time";
+  const time = document.createElement("time");
+  time.textContent = `${publicEntry ? "Last played · " : ""}${timeAgo(entry.t)}`;
+  time.dataset.t = String(entry.t);
+  time.dataset.public = String(publicEntry);
+  time.className = "act-time";
+  const timestamp = new Date(entry.t);
+  if (!Number.isNaN(timestamp.getTime())) {
+    time.dateTime = timestamp.toISOString();
+    time.title = timestamp.toLocaleString();
+  }
   meta.append(time);
   body.append(t, by, meta);
   const more = document.createElement("button");
@@ -1803,7 +1856,8 @@ function activityCard(entry, match, index) {
     card.append(menu); openActMenu = menu;
     menu.querySelector("button").focus();
   });
-  card.append(icon, body, more);
+  card.append(icon, body);
+  if (!publicEntry) card.append(more);
   return card;
 }
 function renderActivity() {
@@ -1811,11 +1865,46 @@ function renderActivity() {
   closeActMenu();
   box.replaceChildren();
   if (PUBLIC_PROFILE) {
-    const empty = document.createElement("p");
-    empty.className = "profile-empty";
-    empty.textContent = "This account has not shared any public activity.";
-    box.append(empty);
-    $("libStatus").textContent = "";
+    const status = $("libStatus");
+    status.textContent = !publicProfileDataReady ? "Loading public activity…"
+      : !S.actShow ? "Activity is hidden on this profile."
+      : LIB.state === "loading" ? "Checking the SQL library…"
+      : LIB.state === "error" ? "The SQL library could not be reached."
+      : "";
+    const needsLibrary = publicActivityData.length > 0;
+    if (!publicProfileDataReady || !S.actShow || LIB.state === "loading" || (LIB.state === "idle" && needsLibrary)) {
+      const empty = document.createElement("p");
+      empty.className = "profile-empty";
+      empty.textContent = !publicProfileDataReady ? "Loading recent activity…"
+        : !S.actShow ? "Activity is hidden on this profile."
+        : "Loading SQL-library activity…";
+      box.append(empty);
+      paintTilesSafe();
+      return;
+    }
+    if (LIB.state === "error") {
+      const empty = document.createElement("p");
+      empty.className = "profile-empty";
+      empty.textContent = "Recent activity is unavailable because the SQL library could not be loaded.";
+      box.append(empty);
+      paintTilesSafe();
+      return;
+    }
+    const entries = publicActivityData
+      .map((entry) => ({ url: entry.url, t: entry.t }))
+      .filter((entry) => matchLink(entry.url))
+      .slice(0, RECENT_MAX);
+    if (!entries.length) {
+      const empty = document.createElement("p");
+      empty.className = "profile-empty";
+      empty.textContent = publicActivityData.length
+        ? "No recent links match the SQL library."
+        : "No public SQL-library activity yet.";
+      box.append(empty);
+      paintTilesSafe();
+      return;
+    }
+    entries.forEach((entry, index) => box.append(activityCard(entry, matchLink(entry.url), index, true)));
     paintTilesSafe();
     return;
   }
@@ -1837,7 +1926,9 @@ function renderActivity() {
 function paintTilesSafe() { if ($("tileAct")) { const count = readRecent().length; $("tileAct").textContent = !S.actShow ? "Hidden on profile" : count ? `${count} of ${RECENT_MAX} recent links` : "No recent links yet"; } }
 document.addEventListener("click", (event) => { if (!event.target.closest(".act-menu, .act-more")) closeActMenu(); });
 document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeActMenu(); });
-setInterval(() => document.querySelectorAll(".act-time").forEach((el) => { el.textContent = timeAgo(Number(el.dataset.t)); }), 60000);
+setInterval(() => document.querySelectorAll(".act-time").forEach((el) => {
+  el.textContent = `${el.dataset.public === "true" ? "Last played · " : ""}${timeAgo(Number(el.dataset.t))}`;
+}), 60000);
 
 function refreshActivityTools() {
   const info = $("libInfo"); if (!info) return;
@@ -1862,7 +1953,15 @@ $("actRecordPick").addEventListener("click", () => {
   if (!$("actPick").value) { notifyProfile("Choose a library item first.", "warning"); return; }
   recordOpen($("actPick").value);
 });
-$("actClear").addEventListener("click", () => { writeRecent([]); renderActivity(); notifyProfile("Recent opens cleared.", "success"); });
+$("actClear").addEventListener("click", async () => {
+  if (!writeRecent([])) { notifyProfile("Could not clear recent activity. Check browser storage and try again.", "danger"); return; }
+  renderActivity();
+  if (EMBEDDED_PROFILE && typeof window.parent.WS_Msg?.clearPublicActivity === "function") {
+    const result = await window.parent.WS_Msg.clearPublicActivity();
+    if (!result.ok) { notifyProfile(`Local activity cleared. ${result.error}`, "warning"); return; }
+  }
+  notifyProfile("Recent activity cleared.", "success");
+});
 $("libReload").addEventListener("click", () => { $("actPick").dataset.filled = ""; loadLibrary(true); });
 $("actShow").addEventListener("change", renderActivity);
 

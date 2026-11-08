@@ -223,8 +223,7 @@
    <p class="tiny" id="libInfo" role="status" aria-live="polite"></p>
    <div class="row"><button type="button" class="mini" id="libReload">Reload library</button></div>
    <h2>Hook for the main site</h2>
-   <p class="section-note">Call this at the top of <code>openAsset(link)</code> in main.js. Opens recorded in any tab show up here live.</p>
-   <pre class="code-note">window.WS_recordOpen?.(link);</pre>
+   <p class="section-note">Opening a SQL-library asset on WannaSmile records it here. When Activity is enabled, your six most recent assets are shared with your public profile.</p>
    <p class="tiny">Stored in localStorage as <code>ws_recent_opens</code>: up to 6 entries of {url, t}. Nothing else is saved; matching happens at display time.</p>
   </section>
 
@@ -277,6 +276,7 @@
     <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm0 1c-2.67 0-5 1.34-5 3v2h8.2a4.5 4.5 0 0 1-.7-2.4c0-.96.3-1.85.8-2.58A10 10 0 0 0 6 9Zm7-1v2h-2v2h2v2h2v-2h2v-2h-2V8z"></path></svg>
     Add Friend
    </button>
+   <button type="button" class="profile-action profile-full" id="viewFullProfile">View full profile</button>
   </div>
   <div id="body">
    <div class="profile-identity" data-np="off">
@@ -316,37 +316,17 @@
 
 <aside class="right" id="activityRail" aria-label="Profile activity">
  <div class="rail-tabs" id="railTabs" role="tablist" aria-label="Profile sections">
-  <button type="button" class="rail-tab" id="railBoardBtn" role="tab" aria-selected="false" aria-controls="railBoard" tabindex="-1">Board</button>
-  <button type="button" class="rail-tab" id="railActivityBtn" role="tab" aria-selected="true" aria-controls="railActivity" tabindex="0">Activity</button>
+  <button type="button" class="rail-tab" id="railActivityBtn" role="tab" aria-selected="true" aria-controls="railActivity" tabindex="0">Recent activity</button>
   <button type="button" class="rail-tab" id="railFriendsBtn" role="tab" aria-selected="false" aria-controls="railFriends" tabindex="-1">Friends</button>
-  <button type="button" class="rail-tab" id="railWishBtn" role="tab" aria-selected="false" aria-controls="railWish" tabindex="-1">Wishlist</button>
  </div>
  <section id="railActivity" role="tabpanel" aria-labelledby="railActivityBtn">
-  <p class="rail-eyebrow">Recent activity</p>
-  <p class="rail-sub">You'll see the last 6 links opened on this site. <span id="libStatus"></span></p>
+  <p class="rail-sub">SQL-library assets opened by this account. <span id="libStatus"></span></p>
   <div class="act-list" id="activityList"></div>
  </section>
- <section id="railBoard" role="tabpanel" aria-labelledby="railBoardBtn" hidden><p class="profile-empty">Nothing pinned to the board yet. Preview only.</p></section>
  <section id="railFriends" class="profile-friends" role="tabpanel" aria-labelledby="railFriendsBtn" hidden>
-  <div class="friends-preview-head"><strong>Collapsed friends-list view</strong><button type="button" id="shuffleFriendsPreview" aria-label="Shuffle sample nameplate backgrounds and frames">Shuffle</button></div>
-  <p class="rail-sub">Random profile photos, name styles, backgrounds, and avatar frames. Preview only.</p>
-  <div class="profile-friend" data-friend-preview>
-   <span class="friend-plate" aria-hidden="true"></span><span class="friend-plate-scrim" aria-hidden="true"></span>
-   <span class="profile-friend-avatar-wrap"><span class="profile-friend-avatar" aria-hidden="true"><img alt=""></span><span class="profile-friend-frame" aria-hidden="true"></span></span>
-   <span class="profile-friend-meta"><span class="profile-friend-name">Aster</span></span>
-  </div>
-  <div class="profile-friend" data-friend-preview>
-   <span class="friend-plate" aria-hidden="true"></span><span class="friend-plate-scrim" aria-hidden="true"></span>
-   <span class="profile-friend-avatar-wrap"><span class="profile-friend-avatar" aria-hidden="true"><img alt=""></span><span class="profile-friend-frame" aria-hidden="true"></span></span>
-   <span class="profile-friend-meta"><span class="profile-friend-name">Mika</span></span>
-  </div>
-  <div class="profile-friend" data-friend-preview>
-   <span class="friend-plate" aria-hidden="true"></span><span class="friend-plate-scrim" aria-hidden="true"></span>
-   <span class="profile-friend-avatar-wrap"><span class="profile-friend-avatar" aria-hidden="true"><img alt=""></span><span class="profile-friend-frame" aria-hidden="true"></span></span>
-   <span class="profile-friend-meta"><span class="profile-friend-name">Rowan</span></span>
-  </div>
+  <p class="rail-sub">Only friends with a published public profile are shown.</p>
+  <div class="profile-friends-list" id="publicFriendsList"></div>
  </section>
- <section id="railWish" role="tabpanel" aria-labelledby="railWishBtn" hidden><p class="profile-empty">No wishlist items yet. Preview only.</p></section>
 </aside>
 </div>
 

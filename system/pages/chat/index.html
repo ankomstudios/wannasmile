@@ -99,6 +99,16 @@ input[type="text"]:focus, textarea:focus { border-color: var(--accent-color, #f4
 .pf .who { min-width: 0; }
 .pf b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pf small { opacity: 0.65; font-size: 0.72rem; }
+.user-dock { position: relative; isolation: isolate; flex: none; width: 100%; min-height: 68px; border: 0; border-top: 1px solid rgba(255,255,255,0.12); background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.user-dock::before { position: absolute; inset: 5px 8px; z-index: 0; border-radius: 9px; background: var(--dock-plate,linear-gradient(115deg,rgba(255,255,255,0.04),rgba(255,255,255,0.1))); background-size: var(--dock-plate-size,cover); background-repeat: var(--dock-plate-repeat,no-repeat); background-position: center; content: ""; opacity: var(--dock-opacity,1); }
+.user-dock > * { position: relative; z-index: 1; }
+.user-dock:hover::before { filter: brightness(1.2); }
+.user-dock:focus-visible { outline: 2px solid var(--accent-color,#f44); outline-offset: -3px; }
+.user-dock #meName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.user-dock .who b { display: flex; align-items: center; gap: 7px; }
+.user-dock .ws-bot-shield { flex: none; }
+.user-dock #meUser { display: block; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.user-dock .fa-chevron-up { margin-left: auto; opacity: .7; }
 .add { display: flex; gap: 8px; padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.12); }
 .list { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
 .group { font-size: 0.68rem; font-weight: bold; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.65; padding: 12px 14px 4px; }
@@ -201,6 +211,8 @@ body.profile-modal-open { overflow: hidden; }
 #profileModal .pfm-effects[hidden] { display:none; }
 #profileModal .pfm-stage { position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; gap:12px; width:100%; max-width:620px; margin:auto; }
 #profileModal .pfm-card { width:min(600px,calc(100vw - 24px)); height:var(--pfm-h,420px); max-height:calc(100dvh - 88px); transition:opacity .2s ease; }
+#profileModal[data-stage="full"] .pfm-stage { max-width:980px; }
+#profileModal[data-stage="full"] .pfm-card { width:min(960px,calc(100vw - 24px)); }
 #profileModal .pfm-card[data-loading="true"] { opacity:0; }
 #profileModal .pfm-frame { display:block; width:100%; height:100%; border:0; background:transparent; }
 #profileModal .pfm-actions { display:flex; justify-content:center; }
@@ -208,6 +220,10 @@ body.profile-modal-open { overflow: hidden; }
 #profileModal .pfm-btn:focus-visible { outline:2px solid var(--url-color,#fff); outline-offset:3px; }
 #profileModal .pfm-btn[hidden] { display:none; }
 @media (prefers-reduced-motion:reduce) { #profileModal .pfm-card { transition:none; } }
+@media (max-width:760px) {
+  #profileModal.pfm { padding:6px; }
+  #profileModal[data-stage="full"] .pfm-card { width:calc(100vw - 12px); }
+}
 </style>
 </head>
 
@@ -231,15 +247,19 @@ body.profile-modal-open { overflow: hidden; }
 <div id="app" style="display:contents" hidden>
   <div class="inbox" id="chat">
     <aside class="side" aria-label="Conversations">
-      <div class="pf">
-        <span id="meAvatar" aria-hidden="true"></span>
-        <div class="who"><b id="meName">…</b><small id="meUser">signed in with your account</small></div>
-      </div>
       <form class="add" id="addForm" autocomplete="off">
         <input type="text" id="addName" placeholder="Add a friend by username" maxlength="21" spellcheck="false" aria-label="Friend's username" />
         <button class="btn" type="submit" id="addBtn" title="Send friend request" aria-label="Send friend request"><i class="fa-solid fa-user-plus" aria-hidden="true"></i></button>
       </form>
       <div class="list" id="list"></div>
+      <button type="button" class="pf user-dock" id="userNameplate" aria-label="Open your profile">
+        <span id="meAvatar" aria-hidden="true"></span>
+        <span class="who">
+          <b><span id="meName">…</span><span class="ws-bot-shield" id="meBotShield" title="WannaSmile demo bot" aria-label="Bot account" hidden>bot</span></b>
+          <small id="meUser">signed in with your account</small>
+        </span>
+        <i class="fa-solid fa-chevron-up" aria-hidden="true"></i>
+      </button>
     </aside>
 
     <section class="conv" aria-label="Conversation">

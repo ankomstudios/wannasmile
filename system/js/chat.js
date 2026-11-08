@@ -389,7 +389,64 @@
       holder.textContent = "";
       holder.append(avatar(state.me));
     }
-    $("meName").textContent = shown(state.me);
+    let profile = {};
+    try {
+      const saved = JSON.parse(read("ws_profile_style_main") || "{}");
+      if (saved && typeof saved === "object" && !Array.isArray(saved)) profile = saved;
+    } catch (error) {
+      console.error("Could not read the saved nameplate profile.", error);
+    }
+    const name = $("meName");
+    name.textContent = (typeof profile.nm === "string" ? profile.nm : "").trim() || shown(state.me);
+    const fonts = new Set([
+      "ui-monospace,Menlo,Consolas,monospace", "Georgia,serif", "'Comic Sans MS','Comic Neue',cursive",
+      "Impact,Haettenschweiler,sans-serif", "'Brush Script MT',cursive", "system-ui,sans-serif",
+    ]);
+    name.style.fontFamily = fonts.has(profile.nf) ? profile.nf : "system-ui,sans-serif";
+    name.style.color = /^#[0-9a-f]{3,8}$/i.test(String(profile.nc || "")) ? profile.nc : "#f2f3f5";
+    name.style.fontWeight = profile.nb === false ? "400" : "700";
+    name.style.fontStyle = profile.ni === true ? "italic" : "normal";
+    const stroke = Math.max(0, Math.min(2, Number(profile.no) || 0));
+    name.style.webkitTextStroke = `${stroke}px #000`;
+    name.style.paintOrder = "stroke fill";
+    const dock = $("userNameplate");
+    const shield = $("meBotShield");
+    if (shield) shield.hidden = !isBotAccount(state.me);
+    if (dock) {
+      const presetPlates = {
+        ember: "linear-gradient(100deg,#5a1209,#d6401f 40%,#ffb347 65%,#5a1209)",
+        aurora: "linear-gradient(100deg,#0f2027,#2c7a7b 28%,#6b5bd6 55%,#d65bb0 80%,#0f2027)",
+        candy: "linear-gradient(100deg,#ff6ec7,#ffd36e 50%,#6ee7ff)",
+        ocean: "repeating-linear-gradient(115deg,#082a4d 0 14px,#0b3d6e 14px 28px)",
+        scan: "repeating-linear-gradient(0deg,rgba(255,255,255,.07) 0 1px,transparent 1px 3px),linear-gradient(100deg,#101820,#2b3a4a)",
+        halftone: "radial-gradient(circle,rgba(255,255,255,.24) 1.5px,transparent 2px) 0 0/10px 10px,linear-gradient(100deg,#3a1c71,#d76d77)",
+      };
+      const kind = String(profile.npKind || "none");
+      const image = String(profile.npImg || "").trim();
+      let safeImage = "";
+      if (/^data:image\/(?:png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/i.test(image)) safeImage = image;
+      else {
+        try {
+          const parsed = new URL(image);
+          if (parsed.protocol === "https:") safeImage = parsed.href;
+        } catch (_) {}
+      }
+      let background = "linear-gradient(115deg,rgba(255,255,255,.04),rgba(255,255,255,.1))";
+      dock.style.setProperty("--dock-plate-size", "cover");
+      dock.style.setProperty("--dock-plate-repeat", "no-repeat");
+      if (kind !== "none") {
+        if (safeImage) {
+          background = `url("${safeImage}")`;
+          const fit = profile.npFit;
+          dock.style.setProperty("--dock-plate-size", fit === "stretch" ? "100% 100%" : fit === "tile" ? "auto 100%" : "cover");
+          dock.style.setProperty("--dock-plate-repeat", fit === "tile" ? "repeat-x" : "no-repeat");
+        } else background = presetPlates[profile.npId] || presetPlates.ember;
+        const dim = Math.max(0, Math.min(0.8, (Number(profile.npDim) || 0) / 100));
+        background = `linear-gradient(90deg,rgba(0,0,0,${dim}),rgba(0,0,0,${dim * 0.45})),${background}`;
+      }
+      dock.style.setProperty("--dock-plate", background);
+      dock.style.setProperty("--dock-opacity", kind === "none" ? "1" : String(Math.max(0.1, Math.min(1, (Number(profile.npOpacity) || 100) / 100))));
+    }
     $("meUser").textContent = "@" + state.me;
   }
 
@@ -618,6 +675,19 @@
     const approved = read(K.status) === "approved" && !!read(K.id) && !!read(K.key);
     if (!approved) return gate("Sign in to chat", "Create an account or sign in on the WannaSmile homepage, then return here.", "Go to WannaSmile");
 
+    if (typeof window.WS_ProfileApply !== "function") {
+      window.WS_ProfileApply = (profile) => {
+        if (!profile || typeof profile !== "object" || Array.isArray(profile)) return false;
+        try {
+          localStorage.setItem("ws_profile_style_main", JSON.stringify(profile));
+          paintMe();
+          return true;
+        } catch (error) {
+          console.error("Could not save the profile nameplate.", error);
+          return false;
+        }
+      };
+    }
     // The username is on hand straight away from the signed-in account; the
     // server's answer (state.me) replaces it once the first poll lands.
     state.me = read(K.user).toLowerCase();
@@ -625,6 +695,10 @@
     paintMe();
     renderFriends();
     updateCount();
+    $("userNameplate").addEventListener("click", () => {
+      if (typeof window.openProfileOverlay === "function") window.openProfileOverlay();
+      else toast("Your profile editor is unavailable right now.");
+    });
 
     if (M) {
       // A notification (or the DM button) asking for a conversation while this page is open.
@@ -651,6 +725,7 @@
     window.addEventListener("storage", (e) => {
       if (e.key === K.status && e.newValue !== "approved") gate("Sign in to chat", "Your account session ended. Sign in on the WannaSmile homepage, then return here.", "Go to WannaSmile");
       else if (e.key === K.seen) renderFriends();
+      else if (e.key === "ws_profile_style_main") paintMe();
     });
   }
 

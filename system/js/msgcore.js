@@ -249,6 +249,57 @@
     return { ok: true };
   }
 
+  async function recordPublicActivity(rawUrl) {
+    let url;
+    try { url = new URL(String(rawUrl || "").trim()); }
+    catch { return { ok: false, error: "Invalid activity link." }; }
+    if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || !url.hostname) {
+      return { ok: false, error: "Invalid activity link." };
+    }
+
+    const activityUrl = url.href;
+    const current = json("ws_recent_opens", []);
+    const recent = (Array.isArray(current) ? current : [])
+      .filter((entry) => entry && typeof entry.url === "string" && Number.isFinite(entry.t) && entry.url !== activityUrl);
+    recent.unshift({ url: activityUrl, t: Date.now() });
+    write("ws_recent_opens", JSON.stringify(recent.slice(0, 6)));
+
+    if (!active()) return { ok: false, error: "Sign in to sync public activity." };
+    let profile = {};
+    try { profile = JSON.parse(read("ws_profile_style_main") || "{}"); }
+    catch (error) {
+      console.error("[WS_Msg] Saved profile data is invalid; public activity was not synced:", error);
+      return { ok: false, error: "The saved profile is invalid." };
+    }
+    if (profile?.actShow === false) return { ok: false, error: "Activity sharing is disabled." };
+    try {
+      const result = await post("profile", { action: "activity_save", url: activityUrl });
+      if (!result || result.ok !== true) {
+        console.error("[WS_Msg] Public activity sync failed:", result?.error || "Unexpected response.");
+        return { ok: false, error: result?.error || "The activity could not be synced." };
+      }
+      return { ok: true };
+    } catch (error) {
+      console.error("[WS_Msg] Public activity sync failed:", error);
+      return { ok: false, error: "The activity could not be synced." };
+    }
+  }
+
+  async function clearPublicActivity() {
+    if (!active()) return { ok: false, error: "Sign in to clear public activity." };
+    try {
+      const result = await post("profile", { action: "activity_clear" });
+      if (!result || result.ok !== true) {
+        console.error("[WS_Msg] Public activity clear failed:", result?.error || "Unexpected response.");
+        return { ok: false, error: result?.error || "Public activity could not be cleared." };
+      }
+      return { ok: true };
+    } catch (error) {
+      console.error("[WS_Msg] Public activity clear failed:", error);
+      return { ok: false, error: "Public activity could not be cleared." };
+    }
+  }
+
   async function syncSavedPublicProfile() {
     const raw = read("ws_profile_style_main");
     if (!raw) return;
@@ -746,7 +797,7 @@
   }
 
   window.WS_Msg = {
-    ingest, markSeen, avatar, refreshAvatars, displayName, sendTyping, syncProfile, publishPublicProfile,
+    ingest, markSeen, avatar, refreshAvatars, displayName, sendTyping, syncProfile, publishPublicProfile, recordPublicActivity, clearPublicActivity,
     isTyping, typingText, summaryTyping,
     unread: () => unreadFriends().map((f) => f.name),
     me: () => myName(),

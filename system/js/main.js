@@ -1267,6 +1267,7 @@ window.addEventListener("load", () => {
     const incognitoMode = localStorage.getItem("incognitoMode") || "off";
     const matched       = _linkIndex.get(link.trim());
     const resolvedLink  = matched ? matched.linkTrim : link;
+    if (matched) void window.WS_Msg?.recordPublicActivity?.(resolvedLink);
     const renderTitle   = matched ? matched.title || "Embed" : "Embed";
     const renderFav     = matched ? matched.imageTrim : "";
 

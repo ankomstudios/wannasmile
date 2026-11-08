@@ -184,6 +184,7 @@ aside>label>span{flex-basis:108px}
 .profile-action.message svg{width:17px;height:17px;fill:currentColor}
 .profile-action.add-friend{display:inline-flex;align-items:center;gap:6px}
 .profile-action.add-friend svg{width:14px;height:14px;fill:currentColor}
+.profile-action.profile-full{right:16px;display:none}
 #body{position:relative;z-index:3;padding: max(4px,calc(var(--avatar-size) - 112px)) 16px 20px;text-align:left;background:transparent}
 .profile-name-row{display:flex;align-items:center;justify-content:center;gap:7px;min-width:0;flex-wrap:wrap;text-align:center}
 #name{min-width:0;margin:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;color:#f2f3f5;font:700 clamp(19px,3.5vw,23px)/1.25 system-ui,-apple-system,"Segoe UI",sans-serif;word-break:break-word}
@@ -217,19 +218,14 @@ aside>label>span{flex-basis:108px}
 .profile-created strong{display:block;margin-bottom:4px;color:#e4e5e7;font-size:12px}
 .profile-created time{white-space:nowrap}
 .profile-empty{padding:18px 4px;color:#c6c8cc}
-.friends-preview-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0 12px}
-.friends-preview-head strong{font:700 12px system-ui,-apple-system,"Segoe UI",sans-serif}
-#shuffleFriendsPreview{flex:none;padding:5px 8px;font-size:11px}
 .profile-friends{display:grid;gap:7px}
+.profile-friends-list{display:grid;gap:7px}
 .profile-friend{position:relative;isolation:isolate;display:flex;align-items:center;gap:11px;min-height:58px;padding:8px 10px;overflow:hidden;border:0;border-radius:8px;background:#25262b}
-.friend-plate{position:absolute;inset:0;z-index:0;background:#25262b center/cover no-repeat}
-.friend-plate-scrim{position:absolute;inset:0;z-index:1;background:linear-gradient(90deg,rgba(0,0,0,.72),rgba(0,0,0,.42))}
-.profile-friend-avatar-wrap,.profile-friend-meta{position:relative;z-index:2}
+.profile-friend-avatar-wrap,.profile-friend-meta{position:relative;z-index:1}
 .profile-friend-avatar-wrap{position:relative;flex:0 0 38px;width:38px;height:38px}
 .profile-friend:last-child{border-bottom:0}
 .profile-friend-avatar{position:absolute;inset:0;display:block;width:100%;height:100%;overflow:hidden;border:2px solid #383a40;border-radius:50%;background:#51545e;color:#fff}
 .profile-friend-avatar img{display:block;width:100%;height:100%;border-radius:inherit;object-fit:cover}
-.profile-friend-frame{position:absolute;top:50%;left:50%;z-index:2;width:52px;height:52px;background:center/contain no-repeat;pointer-events:none;filter:drop-shadow(0 1px 2px rgba(0,0,0,.8));transform:translate(-50%,-50%)}
 .profile-friend-name{color:#fff;font-size:13px;font-weight:700}
 .profile-friend-note{display:block;color:#e0e1e4;font-size:11px}
 body>.sl-toast-stack{position:fixed;top:16px;right:16px;z-index:20000;padding:0}
@@ -463,3 +459,25 @@ code{padding:0 4px;border-radius:4px;background:rgba(255,255,255,.1);font-size:1
 :root.profile-embedded #editSidebar{display:flex;flex-direction:column}
 :root.profile-embedded #editHome,:root.profile-embedded #editPane{flex:1 1 0%;height:auto;min-height:0;max-height:none;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 :root.profile-embedded main{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+:root.profile-embedded[data-public-profile][data-pf-stage="view"] #viewFullProfile,
+:root.profile-embedded[data-public-profile][data-pf-stage="full"] #viewFullProfile{display:inline-flex!important}
+:root.profile-embedded[data-pf-stage="full"] #profileEditor,
+:root.profile-embedded[data-pf-stage="full"] #profileEditor[data-profile-align]{
+ width:min(960px,100%);height:100vh;height:100dvh;min-height:0;grid-template-columns:minmax(0,1fr) minmax(270px,340px);
+ grid-template-areas:"preview media";grid-template-rows:minmax(0,1fr);gap:0;border:1px solid var(--line);border-radius:14px;background:var(--panel);overflow:hidden
+}
+:root.profile-embedded[data-pf-stage="full"] #editSidebar{display:none}
+:root.profile-embedded[data-pf-stage="full"] #profileTopToolbar{display:none}
+:root.profile-embedded[data-pf-stage="full"] main{min-height:0;max-height:100%;padding:18px 12px;overflow:auto}
+:root.profile-embedded[data-pf-stage="full"] #previewShell{width:min(560px,100%);margin-block:auto}
+:root.profile-embedded[data-pf-stage="full"] #activityRail{display:block!important;min-height:0;max-height:100%;padding:20px 16px;overflow:auto;border-left:1px solid var(--line);background:rgba(0,0,0,.18)}
+:root.profile-embedded[data-pf-stage="full"] #activityRail .rail-tabs{position:sticky;top:0;z-index:2;background:var(--panel)}
+@media(max-width:760px){
+ :root.profile-embedded[data-pf-stage="full"] #profileEditor,
+ :root.profile-embedded[data-pf-stage="full"] #profileEditor[data-profile-align]{
+  grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(220px,.72fr);
+  grid-template-areas:"preview" "media"
+ }
+ :root.profile-embedded[data-pf-stage="full"] main{padding:10px 6px}
+ :root.profile-embedded[data-pf-stage="full"] #activityRail{padding:12px;border-top:1px solid var(--line);border-left:0}
+}
