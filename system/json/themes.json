@@ -1,5 +1,26 @@
 [
   [
+    "Theme Fallback",
+    "theme_fallback",
+    "ok",
+    "/system/theme/nexus/shade5.png",
+    "/system/theme/nexus/shade4.png",
+    "/system/theme/nexus/mainbg.png",
+    "/system/theme/nexus/shade1.png",
+    "rgba(0, 0, 0, 0.95)",
+    "#000",
+    "#fff",
+    "#fff",
+    "#ff4444",
+    "#f0f0f0",
+    "#333",
+    "#888",
+    "#333",
+    "rgba(0, 0, 0, 0.3)",
+    "#000",
+    ""
+  ],
+  [
     "Nexus",
     "nexus",
     "ok",

@@ -53,6 +53,7 @@ function _removeCloak() {
   });
 
   setTimeout(() => { document.title = _REAL_TITLE; }, 0);
+  window.WS_RefreshFallbackFavicon?.();
 }
 
 let _cloakCatalog = null;

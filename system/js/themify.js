@@ -1,14 +1,22 @@
 "use strict";
 
-const DEFAULT_THEME    = "nexus";
+const DEFAULT_THEME    = "theme_fallback";
 const DEFAULT_GIF_SIZE = 128;
 
 const THEME_CACHE_KEY    = "ws_theme_cache";     // { [id]: rawRowArray }
 const THEME_SHORTCUT_KEY = "ws_selected_themes"; // [id, id, ...] up to 9, pick order
 const THEME_EXPLICIT_KEY = "ws_theme_explicit";
-// Instant-paint fallback only: the same Nexus row also lives first in
-// json/themes.json, and that copy wins as soon as the catalog has loaded.
+// Instant-paint themes also live in json/themes.json; catalog rows replace
+// these copies as soon as the local catalog has loaded.
 const BUILTIN_THEME_ROWS = [[
+  "Theme Fallback", "theme_fallback", "ok",
+  "/system/theme/nexus/shade5.png",
+  "/system/theme/nexus/shade4.png",
+  "/system/theme/nexus/mainbg.png",
+  "/system/theme/nexus/shade1.png",
+  "rgba(0, 0, 0, 0.95)", "#000", "#fff", "#fff", "#ff4444",
+  "#f0f0f0", "#333", "#888", "#333", "rgba(0, 0, 0, 0.3)", "#000", "",
+], [
   "Nexus", "nexus", "ready",
   "https://ws.ankomstudios.com/themes/nexus/header/splash.png",
   "https://ws.ankomstudios.com/themes/nexus/quote/splash.png",
@@ -64,10 +72,10 @@ const _COL = {
 };
 
 const _ROOT_CSS = `:root {
-  --header-bg: url("https://ws.ankomstudios.com/themes/nexus/header/splash.png");
-  --quote-bg: url("https://ws.ankomstudios.com/themes/nexus/quote/splash.png");
-  --main-bg: url("https://ws.ankomstudios.com/themes/nexus/main/splash.png");
-  --footer-bg: url("https://ws.ankomstudios.com/themes/nexus/footer/splash.png");
+  --header-bg: url("/system/theme/nexus/shade5.png");
+  --quote-bg: url("/system/theme/nexus/shade4.png");
+  --main-bg: url("/system/theme/nexus/mainbg.png");
+  --footer-bg: url("/system/theme/nexus/shade1.png");
   --aside-bg: rgba(0, 0, 0, 0.95);
   --text-color: #000;
   --url-color: #fff;
@@ -121,6 +129,11 @@ function _normalizeBgValue(val) {
 const _LIVE_SITE_RE = /^https?:\/\/(?:wannasmile4evr|vvannazmile)\.github\.io\.?\//i;
 const _ON_LIVE_SITE = /^(?:wannasmile4evr|vvannazmile)\.github\.io\.?$/i.test(location.hostname);
 const _SITE_ROOT    = new URL("../../", document.currentScript?.src || location.href).href;
+const _FALLBACK_FAVICON = new URL("system/favicon/ico.png", _SITE_ROOT).href;
+const _PAGE_FAVICON = document.querySelector("link[rel~='icon']")?.href || "";
+const _ORIGINAL_FAVICON = localStorage.getItem("cloakEnabled") === "true"
+  ? localStorage.getItem("_realFavicon") || _PAGE_FAVICON
+  : _PAGE_FAVICON;
 
 function _localizeSiteUrl(val) {
   const v = (val || "").trim();
@@ -252,6 +265,23 @@ function setFavicon(url) {
     : (url ? new URL(url, _SITE_ROOT + "system/").href : "");
 }
 
+function syncFallbackFavicon() {
+  const root = document.documentElement;
+  const fallbackActive = root.getAttribute("theme")?.toLowerCase() === "theme_fallback"
+    || root.classList.contains("ws-bg-fallback");
+  if (localStorage.getItem("cloakEnabled") === "true") return;
+
+  if (fallbackActive) {
+    setFavicon(_FALLBACK_FAVICON);
+    return;
+  }
+
+  const link = document.querySelector("link[rel~='icon']");
+  if (_ORIGINAL_FAVICON) setFavicon(_ORIGINAL_FAVICON);
+  else link?.remove();
+}
+window.WS_RefreshFallbackFavicon = syncFallbackFavicon;
+
 (function applyGlobalCloak() {
   if (localStorage.getItem("cloakEnabled") !== "true") return;
   const savedTitle = localStorage.getItem("cloakTitle");
@@ -263,7 +293,7 @@ function setFavicon(url) {
 // Small local cache of full theme rows (keyed by id), refreshed after every
 // successful fetch for whichever ids actually matter (active + shortcuts) —
 // see fetchThemes(). Lets a returning user's theme paint instantly instead
-// of always flashing the hardcoded redux fallback while the network fetch
+// of always flashing the hardcoded local fallback while the network fetch
 // is in flight.
 function _getThemeCache() {
   try {
@@ -318,7 +348,7 @@ function _resolveTheme(raw) {
   let theme = raw ? raw.trim() : DEFAULT_THEME;
   const explicitlyApplied = localStorage.getItem(THEME_EXPLICIT_KEY) === "1";
 
-  if (!explicitlyApplied && theme.toLowerCase() === "redux") theme = DEFAULT_THEME;
+  if (!explicitlyApplied && ["nexus", "redux"].includes(theme.toLowerCase())) theme = DEFAULT_THEME;
   if (!raw || theme !== raw.trim()) localStorage.setItem("selectedTheme", theme);
 
   document.documentElement.setAttribute("theme", theme);
@@ -333,6 +363,7 @@ function _resolveTheme(raw) {
 window.addEventListener("storage", (e) => {
   if (e.key === "cloakTitle") { if (localStorage.getItem("cloakEnabled") === "true") document.title = e.newValue || document.title; }
   if (e.key === "cloakIcon")  { if (localStorage.getItem("cloakEnabled") === "true") setFavicon(e.newValue || ""); }
+  if (e.key === "cloakEnabled" && e.newValue !== "true") syncFallbackFavicon();
 
   // Another page of the site (the store, the other main page) changed the
   // theme or gif pack: follow it here too.
@@ -777,7 +808,7 @@ function _rememberThemeRow(id) {
 // ── Background fallback ──────────────────────────────────────────────────
 // The page background is whatever the active theme's --main-bg is. If that
 // image doesn't load (bad link, host down, offline), html gets .ws-bg-fallback
-// and the CSS swaps in the local copy of Redux's main background instead
+// and the CSS swaps in the local fallback theme's main background instead
 // (main.css, and the store / credits pages). Rechecked whenever the theme
 // changes, however it changes (a MutationObserver on html[theme]).
 let _bgCheckId = 0;
@@ -786,16 +817,18 @@ function _checkMainBg() {
   requestAnimationFrame(() => {
     if (id !== _bgCheckId) return;
     const root = document.documentElement;
+    syncFallbackFavicon();
     const val  = getComputedStyle(root).getPropertyValue("--main-bg").trim();
     const m    = val.match(/url\(\s*(['"]?)(.*?)\1\s*\)/i);
     if (!m) {                       // a colour or gradient: nothing to fail
       root.classList.toggle("ws-bg-fallback", !val);
+      syncFallbackFavicon();
       _smartBg.setImage(null);
       return;
     }
     const img = new Image();
-    img.onload  = () => { if (id === _bgCheckId) { root.classList.remove("ws-bg-fallback"); _smartBg.setImage(img); } };
-    img.onerror = () => { if (id === _bgCheckId) { root.classList.add("ws-bg-fallback"); _smartBg.setImage(null); } };
+    img.onload  = () => { if (id === _bgCheckId) { root.classList.remove("ws-bg-fallback"); syncFallbackFavicon(); _smartBg.setImage(img); } };
+    img.onerror = () => { if (id === _bgCheckId) { root.classList.add("ws-bg-fallback"); syncFallbackFavicon(); _smartBg.setImage(null); } };
     img.src = m[2];
   });
 }
@@ -965,7 +998,7 @@ window.ThemifySheets = { applyTheme, fetchThemes, getThemeData, getThemeId, getC
 
 (async function bootSheets() {
   // Paint the last-known theme immediately from the local cache, if we have
-  // one, instead of always flashing the hardcoded Nexus fallback while the
+  // one, instead of always flashing the hardcoded local fallback while the
   // network fetch below is still in flight.
   const cachedRow = _getCachedRow(_resolveTheme(localStorage.getItem("selectedTheme")));
   const cachedBlock = cachedRow ? await _buildThemeBlock(cachedRow) : "";

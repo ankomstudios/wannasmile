@@ -19,8 +19,8 @@ html {
   background-color: #111;
   overflow: hidden;
 }
-/* The active theme's background didn't load (themify.js): local Redux copy. */
-html.ws-bg-fallback { background-image: url("https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/main/themes/redux/mainBg.png"); }
+/* The active theme's background didn't load (themify.js): local fallback image. */
+html.ws-bg-fallback { background-image: url("/system/theme/nexus/mainbg.png"); }
 body {
   height: 100vh; height: 100dvh;
   display: flex; flex-direction: column;
@@ -301,7 +301,7 @@ body.profile-modal-open { overflow: hidden; }
 <script src="../../js/endpoints.js"></script>
 <script src="../../js/utils.js"></script>
 <script src="../../js/ticket.js"></script>
-<script src="../../js/themify.js"></script>
+<script src="../../js/themify.js?v=theme-fallback-favicon"></script>
 <script src="../../js/cursors.js"></script>
 <script src="../../js/msgcore.js?v=2.4.0-public-profiles"></script>
 <script src="../../js/profile-modal.js?v=2.4.0-public-profiles"></script>

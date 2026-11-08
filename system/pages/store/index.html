@@ -24,8 +24,8 @@ html {
      only (it applies to the window), so the sticky tabs keep working. */
   overflow-x: hidden;
 }
-/* The active theme's background didn't load (themify.js): local Redux copy. */
-html.ws-bg-fallback { background-image: url("https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/main/themes/redux/mainBg.png"); }
+/* The active theme's background didn't load (themify.js): local fallback image. */
+html.ws-bg-fallback { background-image: url("/system/theme/nexus/mainbg.png"); }
 body {
   min-height: 100vh;
   /* clip (unlike hidden) cuts off anything wider than the page without
@@ -475,7 +475,7 @@ kbd {
 <script src="../../js/utils.js"></script>
 <script src="../../js/ticket.js"></script>
 <script src="../../js/msgcore.js"></script>
-<script src="../../js/themify.js"></script>
+<script src="../../js/themify.js?v=theme-fallback-favicon"></script>
 <script src="../../js/frames.js"></script>
 <script src="../../js/wrappers.js"></script>
 <script src="../../js/cursors.js"></script>
