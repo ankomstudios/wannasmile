@@ -34,6 +34,7 @@
   const NAME_RE  = /^[a-z0-9][a-z0-9_.\-]{2,19}$/;
   const MAX_TEXT = 500;
   const MAX_GIF_URL = 2048;
+  const MAX_MENTIONS = 10;
   const POLL_MS  = 4000;      // tab in front (short, so "typing" shows up while it's happening)
   const SLOW_MS  = 30000;     // tab hidden
   const MAX_BACKOFF = 60000;
@@ -41,11 +42,12 @@
   const GROUP_GAP_MS = 5 * 60000; // messages from one person closer than this share one avatar/name
   const GLOBAL = "#global";       // the global room, in place of a friend's username in state.active
   const TESTER = "#tester";       // tester-only room; never accepted as a real username
+  const MENTIONS = "#mentions";
 
   const state = {
-    me: "", friends: [], active: "", messages: [], rev: "", grev: "", trev: "", max: 60, globalOff: false,
-    loading: false, again: false, fails: 0, timer: 0, dead: false, sending: false,
-    wanted: "", replyTo: null, composerMedia: null, rolesByName: Object.create(null), // #with=<name> still waiting for the friend list
+    me: "", friends: [], active: "", messages: [], rev: "", grev: "", trev: "", profileRev: "", max: 60, globalOff: false,
+    loading: false, again: false, fails: 0, timer: 0, dead: false, sending: false, mentions: [], mentionUnread: 0,
+    wanted: "", jumpToId: 0, highlightId: 0, dmUnread: 0, replyTo: null, composerMedia: null, rolesByName: Object.create(null), // #with=<name> still waiting for the friend list
     lastPing: 0,
   };
 
@@ -54,7 +56,14 @@
   const visibleNow = () => document.visibilityState === "visible" && document.hasFocus();
   const inGlobal = () => state.active === GLOBAL;
   const inTester = () => state.active === TESTER;
-  const inSharedRoom = () => inGlobal() || inTester();
+  const inMentions = () => state.active === MENTIONS;
+  const inSharedRoom = () => inGlobal() || inTester() || inMentions();
+  const escapeRegExp = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const hasMentionToken = (text, name) => new RegExp(`(?:^|\\s)@${escapeRegExp(name)}(?=$|[\\s.,!?;:)])`, "i").test(String(text || ""));
+  const mentionNamesIn = (text) => state.friends
+    .filter((friend) => isMentionAllowed(friend.name) && hasMentionToken(text, friend.name))
+    .map((friend) => friend.name)
+    .slice(0, MAX_MENTIONS);
   function openPublicProfile(name) {
     if (typeof window.openPublicProfileOverlay === "function") window.openPublicProfileOverlay(name);
     else toast("Public profiles are unavailable right now.");
@@ -227,9 +236,13 @@
     return el("span", { class: "ws-av" + (cls ? " " + cls : "") }, String(name || "?").charAt(0).toUpperCase());
   }
   // A name that follows later profile updates: refreshNames() rewrites it in place.
-  function nameTag(tag, user, cls) {
-    const node = el(tag, cls ? { class: cls, "data-ws-name": user } : { "data-ws-name": user });
-    node.append(el("span", { class: "ws-name-text", text: shown(user) }));
+  function nameTag(tag, user, cls, displayOverride) {
+    const hasDisplayOverride = typeof displayOverride === "string";
+    const display = hasDisplayOverride ? displayOverride.trim().slice(0, 30) || cleanName(user) : shown(user);
+    const attrs = cls ? { class: cls, "data-ws-name": user } : { "data-ws-name": user };
+    if (hasDisplayOverride) attrs["data-ws-display"] = display;
+    const node = el(tag, attrs);
+    node.append(el("span", { class: "ws-name-text", text: display }));
     if (isBotAccount(user)) node.append(el("span", { class: "ws-bot-shield", title: "WannaSmile demo bot", "aria-label": "Bot account" }, "bot"));
     accountRoles(user).forEach((role) => node.append(el("span", {
       class: `ws-role-shield ws-${role}-shield`,
@@ -240,7 +253,7 @@
   }
   function refreshNames() {
     document.querySelectorAll("[data-ws-name]").forEach((n) => {
-      const t = shown(n.dataset.wsName);
+      const t = n.dataset.wsDisplay || shown(n.dataset.wsName);
       const label = n.querySelector(".ws-name-text");
       if (label && label.textContent !== t) label.textContent = t;
       n.querySelectorAll(".ws-role-shield").forEach((badge) => badge.remove());
@@ -353,6 +366,10 @@
       state.rev = data.rev || state.rev;
       state.grev = data.grev || state.grev;
       state.trev = data.trev || state.trev;
+      if (data.profileRev != null && String(data.profileRev) !== state.profileRev) {
+        state.profileRev = String(data.profileRev);
+        if (M) Promise.resolve(M.refreshProfiles(true)).catch((error) => console.error("[chat] Could not refresh linked profile names.", error));
+      }
       net("live", "Live");
       const previousRoles = roleMapSignature(state.rolesByName);
       if (data.roleNames && typeof data.roleNames === "object" && !Array.isArray(data.roleNames)) {
@@ -382,7 +399,12 @@
 
       state.max = data.max || 60;
       state.friends = Array.isArray(data.friends) ? data.friends : [];
-      if (inSharedRoom()) {
+      state.mentions = Array.isArray(data.mentions) ? data.mentions : state.mentions;
+      state.mentionUnread = Number(data.mentionUnread) || 0;
+      paintUnreadBadge();
+      if (inMentions()) {
+        state.messages = [];
+      } else if (inSharedRoom()) {
         // An answer meant for another conversation (the person switched while it
         // was in flight) is skipped; the refresh queued by open() follows it.
         if (asked === GLOBAL || asked === TESTER) {
@@ -392,6 +414,11 @@
             state.max = roomData.max || 120;
             // Oldest first; equal timestamps keep the order the server listed them (stable sort).
             const listed = (roomData.messages || []).map((m, i) => ({ m, i })).sort((a, b) => ((a.m.ts || 0) - (b.m.ts || 0)) || (a.i - b.i)).map((x) => x.m);
+            if (asked === GLOBAL && M) {
+              listed.forEach((message) => {
+                if (NAME_RE.test(cleanName(message.from))) M.setPublicDisplayName(message.from, message.profileName);
+              });
+            }
             const pending = state.sending ? state.messages.filter((m) => m.pending) : [];
             state.messages = listed.concat(pending.filter((p) => !listed.some((m) =>
               m.from === p.from && m.text === p.text && (m.media?.url || m.gifUrl || "") === (p.media?.url || p.gifUrl || "") && m.ts >= p.ts - 60000)));
@@ -416,6 +443,7 @@
       openWanted();
       renderFriends();
       renderConversation();
+      resolveJumpTarget();
     } catch (err) {
       state.fails++;
       net("off", "Offline");
@@ -467,13 +495,16 @@
     }
   });
 
-  function open(name) {
+  function open(name, jumpToId) {
     if (state.active !== name && state.composerMedia) {
       state.composerMedia = null;
       paintMediaAttachment();
     }
     state.active = name;
     state.messages = [];
+    state.jumpToId = Number.isSafeInteger(Number(jumpToId)) && Number(jumpToId) > 0 ? Number(jumpToId) : 0;
+    state.highlightId = state.jumpToId;
+    closeMentionPicker();
     state.replyTo = null;
     renderReplyComposer();
     state.rev = "";
@@ -492,12 +523,15 @@
 
   function closeConversation() {
     closeUserMenu();
+    closeMentionPicker();
     state.active = "";
     state.replyTo = null;
     renderReplyComposer();
     state.rev = "";
     state.grev = "";
     state.trev = "";
+    state.jumpToId = 0;
+    state.highlightId = 0;
     paintDockPlate();
     if (M) M.setViewing("");
     $("chat").classList.remove("open");
@@ -564,6 +598,7 @@
     const media = state.composerMedia || spotifyMediaFromText(text);
     const gifUrl = media && media.kind === "image" ? normalizeGifUrl(media.url) : "";
     if ((!text && !media) || !state.active || state.sending) return;
+    const mentions = mentionNamesIn(text).filter(isMentionAllowed);
     // Global chat is public, so it gets the same word filter as nicknames and
     // ticket reasons (wordfilter.js; checked here, in the browser).
     if (inGlobal() && text && window.WS_WordFilter && window.WS_WordFilter.find(text)) {
@@ -579,7 +614,7 @@
     updateCount();
     autosize();
     const tmp = {
-      from: state.me, text, gifUrl, media, ts: Date.now(), pending: true,
+      from: state.me, text, gifUrl, media, mentions, ts: Date.now(), pending: true,
       replyTo: replyTo ? { id: replyTo.id, from: replyTo.from, text: replyTo.text, gifUrl: replyTo.gifUrl, media: replyTo.media || null, unavailable: replyTo.unavailable } : null,
     };
     state.replyTo = null;
@@ -590,6 +625,7 @@
       const payload = inGlobal() ? { room: "global", text, media, gifUrl }
         : inTester() ? { room: "tester", text, media, gifUrl }
           : { to, text, media, gifUrl };
+      if (mentions.length) payload.mentions = mentions;
       if (replyTo) payload.replyTo = replyTo.id;
       const r = await post("send", payload);
       if (!r || r.ok !== true) throw new Error((r && r.error) || "Couldn't send that.");
@@ -641,11 +677,43 @@
     paintMediaAttachment();
   });
   $("cancelReply").addEventListener("click", () => setReplyTarget(null));
+  $("mentionPicker").addEventListener("mousedown", (event) => {
+    if (event.target.closest("button")) event.preventDefault();
+  });
+  $("mentionPicker").addEventListener("click", (event) => {
+    const option = event.target.closest("[data-mention-name]");
+    if (option) insertMention(option.dataset.mentionName);
+  });
   $("msg").addEventListener("keydown", (e) => {
+    if (!$("mentionPicker").hidden) {
+      if (e.key === "Escape") { e.preventDefault(); closeMentionPicker(); return; }
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        const options = $("mentionPicker").querySelectorAll("[data-mention-name]");
+        if (options.length) {
+          e.preventDefault();
+          const current = [...options].findIndex((option) => option.getAttribute("aria-selected") === "true");
+          const next = current < 0
+            ? e.key === "ArrowDown" ? 0 : options.length - 1
+            : e.key === "ArrowDown"
+              ? (current + 1) % options.length
+              : (current - 1 + options.length) % options.length;
+          options.forEach((option, index) => option.setAttribute("aria-selected", String(index === next)));
+          $("msg").setAttribute("aria-activedescendant", options[next].id);
+          options[next].scrollIntoView({ block: "nearest" });
+        }
+        return;
+      }
+      if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
+        const option = $("mentionPicker").querySelector('[aria-selected="true"][data-mention-name]') ||
+          $("mentionPicker").querySelector("[data-mention-name]");
+        if (option) { e.preventDefault(); insertMention(option.dataset.mentionName); return; }
+      }
+    }
     if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); }
   });
   $("msg").addEventListener("input", () => {
     updateCount(); autosize();
+    renderMentionPicker();
     // Real typing: tell the friend while there's an unsent draft, at most every few seconds.
     if (!$("msg").value.trim()) { state.lastPing = 0; return; }
     const now = Date.now();
@@ -654,6 +722,76 @@
       M.sendTyping(state.active);
     }
   });
+
+  function isMentionAllowed(name) {
+    const friend = state.friends.find((entry) => entry.name === name && entry.status === "friend");
+    if (!friend || name === state.me || inTester() || inMentions()) return false;
+    return inGlobal() || name === state.active;
+  }
+
+  function closeMentionPicker() {
+    const picker = $("mentionPicker");
+    picker.hidden = true;
+    picker.textContent = "";
+    $("msg").setAttribute("aria-expanded", "false");
+    $("msg").removeAttribute("aria-activedescendant");
+  }
+
+  function renderMentionPicker() {
+    const picker = $("mentionPicker");
+    const input = $("msg");
+    if (!state.active || inTester() || inMentions() || $("mediaPicker") && !$("mediaPicker").hidden) {
+      closeMentionPicker();
+      return;
+    }
+    const caret = input.selectionStart;
+    const before = input.value.slice(0, caret);
+    const match = /(?:^|\s)@([a-z0-9_.-]{0,20})$/i.exec(before);
+    if (!match) { closeMentionPicker(); return; }
+    const query = cleanName(match[1]);
+    const candidates = state.friends
+      .filter((friend) => friend.status === "friend" && isMentionAllowed(friend.name) && friend.name.startsWith(query))
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .slice(0, 8);
+    picker.textContent = "";
+    picker.hidden = false;
+    $("msg").setAttribute("aria-expanded", "true");
+    if (!candidates.length) {
+      picker.append(el("div", { class: "mention-picker-empty", role: "status", text: "No linked friends match." }));
+      $("msg").removeAttribute("aria-activedescendant");
+      return;
+    }
+    candidates.forEach((friend, index) => {
+      picker.append(el("button", {
+        id: `mention-option-${index}`,
+        class: "mention-option",
+        type: "button",
+        role: "option",
+        "aria-selected": index === 0 ? "true" : "false",
+        "data-mention-name": friend.name,
+      }, avatar(friend.name, "sm"), el("span", { class: "mention-option-copy" },
+        el("b", { text: shown(friend.name) }), el("small", { text: "@" + friend.name }))));
+    });
+    $("msg").setAttribute("aria-activedescendant", "mention-option-0");
+  }
+
+  function insertMention(name) {
+    const normalized = cleanName(name);
+    if (!NAME_RE.test(normalized) || !isMentionAllowed(normalized)) return;
+    const input = $("msg");
+    const caret = input.selectionStart;
+    const before = input.value.slice(0, caret);
+    const match = /(?:^|\s)@([a-z0-9_.-]{0,20})$/i.exec(before);
+    if (!match) return closeMentionPicker();
+    const start = caret - match[1].length - 1;
+    input.value = input.value.slice(0, start) + `@${normalized} ` + input.value.slice(caret);
+    const nextCaret = start + normalized.length + 2;
+    input.setSelectionRange(nextCaret, nextCaret);
+    closeMentionPicker();
+    input.focus({ preventScroll: true });
+    updateCount();
+    autosize();
+  }
 
   function updateCount() { $("left").textContent = String(MAX_TEXT - $("msg").value.length); }
   function autosize() {
@@ -677,10 +815,10 @@
     halftone: "radial-gradient(circle,rgba(255,255,255,.24) 1.5px,transparent 2px) 0 0/10px 10px,linear-gradient(100deg,#3a1c71,#d76d77)",
   };
   const PLATE_DEFAULT = "linear-gradient(115deg,rgba(255,255,255,.04),rgba(255,255,255,.1))";
-  const PLATE_TTL = 5 * 60000;       // how long a fetched plate is reused
+  const PLATE_TTL = 5 * 60000;       // fallback refresh interval when a profile version isn't available
   const PLATE_RETRY = 3 * 60000;     // wait before asking again after a failed/missing profile
   const PLATE_PARALLEL = 3;          // public-profile requests in flight at once
-  const plates = Object.create(null); // name -> { plate, at, ok, busy }
+  const plates = Object.create(null); // name -> { plate, updated, at, ok, busy }
   const plateQueue = [];
   let plateActive = 0;
 
@@ -757,13 +895,15 @@
       setPlate(node, global ? plateFor(node.dataset.wsName) : null);
     });
   }
-  function wantPlate(name) {
+  function wantPlate(name, profileUpdated) {
     const n = cleanName(name);
     if (!API || !NAME_RE.test(n) || n === state.me) return;
     const e = plates[n];
-    if (e && (e.busy || Date.now() - e.at < (e.ok ? PLATE_TTL : PLATE_RETRY))) return;
-    plates[n] = { plate: e ? e.plate : null, at: e ? e.at : 0, ok: e ? e.ok : true, busy: true };
-    plateQueue.push(n);
+    const expected = Number(profileUpdated) || 0;
+    if (e && (e.busy || (e.ok && e.updated >= expected && Date.now() - e.at < PLATE_TTL) ||
+        (!e.ok && e.updated >= expected && Date.now() - e.at < PLATE_RETRY))) return;
+    plates[n] = { plate: e ? e.plate : null, updated: e ? e.updated : 0, at: e ? e.at : 0, ok: e ? e.ok : true, busy: true, expected };
+    if (!plateQueue.includes(n)) plateQueue.push(n);
     pumpPlates();
   }
   function pumpPlates() {
@@ -775,17 +915,20 @@
   }
   async function loadPlate(n) {
     const prev = plates[n] || {};
+    const expected = Number(prev.expected) || 0;
     try {
       const url = new URL(API);
       url.search = new URLSearchParams({ type: "publicprofile", username: n }).toString();
       const res = await fetch(url, { cache: "no-store" });
       const data = await res.json();
       if (!res.ok || !data || data.ok !== true || !data.profile || typeof data.profile !== "object" || Array.isArray(data.profile)) throw new Error("no public profile");
+      const updated = Number(data.profileUpdated) || 0;
+      if (updated < expected) throw new Error("The public profile response is older than its message version.");
       M?.setPublicAvatar?.(n, data.avatar);
-      plates[n] = { plate: sanitizePlate(data.profile), at: Date.now(), ok: true, busy: false };
+      plates[n] = { plate: sanitizePlate(data.profile), updated, at: Date.now(), ok: true, busy: false, expected: 0 };
     } catch (_) {
       // Not published (or the Worker is busy): keep any older plate, retry later.
-      plates[n] = { plate: prev.plate || null, at: Date.now(), ok: false, busy: false };
+      plates[n] = { plate: prev.plate || null, updated: prev.updated || 0, at: Date.now(), ok: false, busy: false, expected };
     }
     paintPlates();
   }
@@ -875,6 +1018,11 @@
         el("span", { class: "tx" }, el("span", { class: "nm", text: "Tester channel" }), el("span", { class: "pv", text: "Private to tester-role accounts" }))
       ));
     }
+    list.append(el("button", { class: "conv-row mention-row" + (inMentions() ? " on" : "") + (state.mentionUnread ? " unread" : ""), type: "button", onclick: () => open(MENTIONS) },
+      el("span", { class: "ws-av mention-av", "aria-hidden": "true" }, icon("fa-solid fa-at")),
+      el("span", { class: "tx" }, el("span", { class: "nm", text: "Mentions" }), el("span", { class: "pv", text: state.mentionUnread ? `${state.mentionUnread} unread mention${state.mentionUnread === 1 ? "" : "s"}` : "Messages that mention you" })),
+      state.mentionUnread ? el("span", { class: "mention-count", text: String(Math.min(state.mentionUnread, 99)), "aria-label": `${state.mentionUnread} unread mentions` }) : null
+    ));
 
     if (incoming.length) {
       list.append(el("div", { class: "group", text: `Requests (${incoming.length})` }));
@@ -919,7 +1067,14 @@
     list.scrollTop = keep;
   }
 
-  const peerTitle = () => inGlobal() ? "Global chat" : inTester() ? "Tester channel" : shown(state.active);
+  const peerTitle = () => inGlobal() ? "Global chat" : inTester() ? "Tester channel" : inMentions() ? "Mentions" : shown(state.active);
+
+  function paintUnreadBadge() {
+    const count = state.dmUnread + state.mentionUnread;
+    $("unreadBadge").hidden = !count;
+    $("unreadBadge").textContent = String(count);
+    document.title = (count ? `(${count}) ` : "") + "WannaSmile | Messages";
+  }
 
   function renderConversation() {
     const on = !!state.active;
@@ -934,7 +1089,9 @@
         ? el("span", { class: "ws-av global-av" }, icon("fa-solid fa-earth-americas"))
         : inTester()
           ? el("span", { class: "ws-av tester-av" }, icon("fa-solid fa-user-shield"))
-          : avatar(state.active));
+          : inMentions()
+            ? el("span", { class: "ws-av mention-av" }, icon("fa-solid fa-at"))
+            : avatar(state.active));
     }
     $("peer").textContent = peerTitle();
     const peerProfileButton = $("peerProfileButton");
@@ -942,11 +1099,15 @@
     peerProfileButton.setAttribute("aria-label", inSharedRoom() ? peerTitle() : `View @${state.active}'s profile`);
     peerProfileButton.title = inSharedRoom() ? "" : `View @${state.active}'s profile`;
     $("removeBtn").hidden = inSharedRoom();
+    $("composerWrap").hidden = inMentions();
+    $("typingRow").hidden = inMentions();
     $("msg").placeholder = inGlobal() ? "Message everyone… (Enter to send)" : inTester() ? "Message testers… (Enter to send)" : "Message… (Enter to send)";
     $("keepNote").textContent = inGlobal()
       ? `global chat is open to everyone with an account · only the latest ${state.max} messages are kept`
       : inTester()
         ? `Only tester-role accounts can read or post here · latest ${state.max} messages are kept`
+        : inMentions()
+          ? "Recent messages where linked friends mentioned you"
       : `only the latest ${state.max} messages are kept`;
     paintTyping();
     renderThread(false);
@@ -960,7 +1121,10 @@
     const line = on ? typingLine(state.active) : "";
     if (sub) {
       sub.className = on ? "typing" : "";
-      sub.textContent = on ? line : inGlobal() ? "Everyone with an account can read and post here" : inTester() ? "Private tester channel" : state.active ? "@" + state.active : "";
+      sub.textContent = on ? line : inGlobal() ? "Everyone with an account can read and post here"
+        : inTester() ? "Private tester channel"
+          : inMentions() ? "Recent messages where linked friends mentioned you"
+            : state.active ? "@" + state.active : "";
     }
     if (!row) return;
     if (!on) { if (row.firstChild) row.textContent = ""; return; }
@@ -977,6 +1141,11 @@
     const box = $("thread");
     const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
     box.textContent = "";
+    if (inMentions()) {
+      $("cap").textContent = state.mentionUnread ? `${state.mentionUnread} unread` : `${state.mentions.length} recent`;
+      renderMentionInbox(box);
+      return;
+    }
     const n = state.messages.length;
     $("cap").textContent = n ? `${Math.min(n, state.max)}/${state.max}` : "";
     if (!n) {
@@ -1008,7 +1177,7 @@
           }, node);
         };
         stack = el("div", { class: "stack" },
-          el("div", { class: "by" }, person(nameTag("b", m.from)), " · " + (m.pending ? "sending…" : fmtTime(m.ts))));
+          el("div", { class: "by" }, person(nameTag("b", m.from, "", inGlobal() ? m.profileName : undefined)), " · " + (m.pending ? "sending…" : fmtTime(m.ts))));
         grp = el("div", { class: "grp " + (mine ? "me" : "them") }, person(avatar(m.from, "sm")), stack);
         box.append(grp);
       }
@@ -1020,13 +1189,13 @@
       }
       const media = normalizeMedia(m.media) || (normalizeGifUrl(m.gifUrl) ? { kind: "image", url: normalizeGifUrl(m.gifUrl) } : null);
       if (media) body.append(renderMessageMedia(media));
-      if (m.text) body.append(el("div", { class: "bubble" + (m.pending ? " pending" : ""), title: m.pending ? "" : fmtTime(m.ts), text: m.text }));
+      if (m.text) body.append(renderMessageText(m));
       const replyButton = el("button", {
         class: "message-reply", type: "button", title: "Reply to this message",
         "aria-label": `Reply to ${shown(m.from)}'s message`, hidden: !m.id || m.pending,
         onclick: () => setReplyTarget(m),
       }, icon("fa-solid fa-reply"));
-      stack.append(el("div", { class: "message-line" }, body, replyButton));
+      stack.append(el("div", { class: "message-line" + (Number(m.id) === state.highlightId ? " mention-target" : ""), "data-message-id": Number.isSafeInteger(Number(m.id)) ? Number(m.id) : null }, body, replyButton));
       prev = m;
     }
 
@@ -1074,9 +1243,96 @@
       }
       return frame;
     }
-    if (inGlobal()) new Set(state.messages.map((m) => m.from)).forEach(wantPlate);
+    if (inGlobal()) {
+      const versions = new Map(state.messages.map((m) => [m.from, Math.max(Number(m.profileUpdated) || 0, 0)]));
+      versions.forEach((updated, name) => wantPlate(name, updated));
+    }
     paintPlates();
     if (forceBottom || nearBottom) box.scrollTop = box.scrollHeight;
+    resolveJumpTarget();
+  }
+
+  function renderMessageText(message) {
+    const text = String(message.text || "");
+    const bubble = el("div", { class: "bubble" + (message.pending ? " pending" : ""), title: message.pending ? "" : fmtTime(message.ts) });
+    const mentioned = [...new Set((Array.isArray(message.mentions) ? message.mentions : []).map(cleanName))]
+      .filter((name) => NAME_RE.test(name))
+      .sort((a, b) => b.length - a.length);
+    if (!mentioned.length) {
+      bubble.textContent = text;
+      return bubble;
+    }
+    const pattern = new RegExp(`(^|\\s)@(${mentioned.map(escapeRegExp).join("|")})(?=$|[\\s.,!?;:)])`, "gi");
+    let cursor = 0, match;
+    while ((match = pattern.exec(text))) {
+      const start = match.index + match[1].length;
+      bubble.append(document.createTextNode(text.slice(cursor, start)));
+      bubble.append(el("span", { class: "message-mention", text: match[0].slice(match[1].length) }));
+      cursor = start + match[2].length + 1;
+    }
+    bubble.append(document.createTextNode(text.slice(cursor)));
+    return bubble;
+  }
+
+  function renderMentionInbox(box) {
+    if (!state.mentions.length) {
+      box.append(el("div", { class: "empty mention-empty", text: "No mentions yet. When a linked friend mentions you in Global chat or your conversation, it will appear here." }));
+      return;
+    }
+    for (const item of state.mentions) {
+      const message = item.message || {};
+      const preview = message.text || mediaLabel(message.media, message.gifUrl) || "Mentioned you";
+      const context = item.room === "global" ? "Global chat" : `Conversation with @${item.with}`;
+      box.append(el("button", {
+        class: "mention-item" + (item.readAt == null ? " unread" : ""),
+        type: "button",
+        onclick: () => openMention(item),
+        "aria-label": `${item.readAt == null ? "Unread mention" : "Mention"} from ${shown(message.from)} in ${context}`,
+      },
+        avatar(message.from, "sm"),
+        el("span", { class: "mention-copy" },
+          el("span", { class: "mention-heading" }, nameTag("b", message.from), el("small", { text: context })),
+          el("span", { class: "mention-preview", text: preview })),
+        el("span", { class: "mention-time", text: fmtShort(message.ts) }),
+        item.readAt == null ? el("span", { class: "dot", title: "Unread mention" }) : null
+      ));
+    }
+  }
+
+  async function openMention(item) {
+    const message = item.message || {};
+    if (item.readAt == null) {
+      try {
+        const result = await post("mention_seen", { id: item.mentionId });
+        if (!result || result.ok !== true) throw new Error(result?.error || "That mention could not be marked as read.");
+        item.readAt = Date.now();
+        state.mentionUnread = Math.max(0, state.mentionUnread - 1);
+        paintUnreadBadge();
+        renderFriends();
+      } catch (error) {
+        toast(error.message || "That mention could not be marked as read.");
+        refresh(true);
+      }
+    }
+    state.highlightId = Number(message.id) || 0;
+    open(item.room === "global" ? GLOBAL : cleanName(item.with), state.highlightId);
+  }
+
+  function resolveJumpTarget() {
+    if (!state.jumpToId || !state.messages.length) return;
+    const target = [...$("thread").querySelectorAll("[data-message-id]")].find((node) => Number(node.dataset.messageId) === state.jumpToId);
+    if (!target) return;
+    const id = state.jumpToId;
+    state.highlightId = id;
+    target.classList.add("mention-target");
+    target.tabIndex = -1;
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    target.focus({ preventScroll: true });
+    state.jumpToId = 0;
+    window.setTimeout(() => {
+      if (state.highlightId === id) state.highlightId = 0;
+      target.classList.remove("mention-target");
+    }, 2800);
   }
 
   // Everything WS_Msg can change under us: typing flags, profiles (names/pictures), unread.
@@ -1086,10 +1342,8 @@
     refreshNames();
     if (state.active) $("peer").textContent = peerTitle();
     paintMe();
-    const n = detail && detail.unread ? detail.unread.length : 0;
-    $("unreadBadge").hidden = !n;
-    $("unreadBadge").textContent = String(n);
-    document.title = (n ? `(${n}) ` : "") + "WannaSmile | Messages";
+    state.dmUnread = detail && detail.unread ? detail.unread.length : 0;
+    paintUnreadBadge();
   }
 
   // ── the little menu on a name in global chat ──────────────────────────

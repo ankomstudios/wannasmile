@@ -118,6 +118,13 @@
   // ── names and pictures ────────────────────────────────────────────────
   const myName = () => S.me || lc(read(K.user));
   const ownNick = () => {
+    try {
+      const profile = JSON.parse(profileRead("ws_profile_style_main") || "{}");
+      const styledName = typeof profile?.nm === "string" ? profile.nm.trim() : "";
+      if (styledName && styledName.toLowerCase() !== myName()) return styledName;
+    } catch (error) {
+      console.error("[WS_Msg] Saved profile name is invalid:", error);
+    }
     const n = profileRead("nickname").trim();
     return (n && n.toLowerCase() !== myName() ? n : "") || S.profiles[myName()]?.d || "";
   };
@@ -221,6 +228,16 @@
     const previous = S.profiles[n] || {};
     if (previous.a === safeImage) return;
     S.profiles[n] = { ...previous, a: safeImage };
+    write(K.profiles, JSON.stringify(S.profiles));
+    refreshAvatars();
+  }
+  function setPublicDisplayName(name, value) {
+    const n = lc(name);
+    if (!NAME_RE.test(n)) return;
+    const displayName = String(value || "").trim().slice(0, 30);
+    const previous = S.profiles[n] || {};
+    if (previous.d === displayName) return;
+    S.profiles[n] = { ...previous, d: displayName };
     write(K.profiles, JSON.stringify(S.profiles));
     refreshAvatars();
   }
@@ -348,7 +365,7 @@
     const nick = ownNick();
     const user = myName();
     const sig = hash([user, pic, pixel, nick].join("\n"));
-    if (profileStoreIsScoped() && !["profilePic", "nickname", "pfpPixelated"].some(profileHas)) return true;
+    if (profileStoreIsScoped() && !["profilePic", "nickname", "pfpPixelated", "ws_profile_style_main"].some(profileHas)) return true;
     if (read(K.sig) === sig) return true;
     syncing = true;
     try {
@@ -836,7 +853,7 @@
 
   window.WS_Msg = {
     ingest, markSeen, avatar, refreshAvatars, setPublicAvatar, displayName, sendTyping, syncProfile, publishPublicProfile, recordPublicActivity, clearPublicActivity,
-    isTyping, typingText, summaryTyping,
+    isTyping, typingText, summaryTyping, setPublicDisplayName,
     unread: () => unreadFriends().map((f) => f.name),
     me: () => myName(),
     refreshProfiles: () => loadProfiles(true),

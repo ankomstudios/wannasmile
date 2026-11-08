@@ -133,6 +133,8 @@ div.conv-row { cursor: default; }
 .conv-row:hover { background: rgba(255,255,255,0.06); }
 .conv-row.on { background: rgba(255,255,255,0.12); border-left-color: var(--accent-color, #f44); }
 .conv-row.tester .tester-av { color:#d5c9ff; border-color:#8c78d8; background:rgba(98,82,168,.24); }
+.conv-row.mention-row .mention-av,.mention-av { color:#ffd3ec; border-color:#b65a8d; background:rgba(182,90,141,.2); }
+.mention-count { flex:none; min-width:20px; padding:2px 6px; border:1px solid var(--accent-color,#f44); border-radius:999px; background:rgba(255,255,255,.12); color:inherit; font-size:.72rem; font-weight:bold; text-align:center; }
 .conv-row .tx { flex: 1; min-width: 0; }
 .conv-row .nm { display: block; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .conv-row .pv { display: block; font-size: 0.74rem; opacity: 0.7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
@@ -195,6 +197,29 @@ div.conv-row { cursor: default; }
 .reply-composer .reply-copy b { margin-right:6px; }
 .reply-cancel { flex:none; width:28px; height:28px; border:0; border-radius:50%; background:transparent; color:inherit; cursor:pointer; }
 .reply-cancel:hover { background:rgba(255,255,255,.1); }
+.mention-picker { position:absolute; z-index:25; left:14px; bottom:calc(100% + 8px); display:flex; flex-direction:column; width:min(340px,calc(100% - 28px)); max-height:min(280px,40dvh); overflow:auto; border:1px solid rgba(255,255,255,.2); border-radius:12px; background:#171719; box-shadow:0 12px 32px rgba(0,0,0,.5); }
+.mention-picker[hidden] { display:none; }
+.mention-option { display:flex; align-items:center; gap:9px; width:100%; padding:8px 10px; border:0; border-bottom:1px solid rgba(255,255,255,.08); background:transparent; color:inherit; text-align:left; cursor:pointer; }
+.mention-option:last-child { border-bottom:0; }
+.mention-option:hover,.mention-option[aria-selected="true"] { background:rgba(255,255,255,.1); }
+.mention-option:focus-visible { outline:2px solid var(--accent-color,#f44); outline-offset:-2px; }
+.mention-option-copy { min-width:0; display:flex; flex-direction:column; gap:2px; }
+.mention-option-copy b,.mention-option-copy small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mention-option-copy small { font-size:.72rem; opacity:.72; }
+.mention-picker-empty { padding:12px; font-size:.76rem; opacity:.75; }
+.message-mention { color:var(--url-color,#fff); font-weight:bold; text-decoration:underline; text-decoration-color:var(--accent-color,#f44); text-underline-offset:2px; }
+.mention-target { outline:2px solid var(--accent-color,#f44); outline-offset:3px; border-radius:10px; }
+.mention-item { display:flex; align-items:center; gap:10px; width:100%; padding:12px 14px; border:0; border-bottom:1px solid rgba(255,255,255,.08); background:transparent; color:inherit; text-align:left; cursor:pointer; }
+.mention-item:hover,.mention-item:focus-visible { background:rgba(255,255,255,.08); }
+.mention-item:focus-visible { outline:2px solid var(--accent-color,#f44); outline-offset:-2px; }
+.mention-item.unread .mention-heading b,.mention-item.unread .mention-preview { font-weight:bold; }
+.mention-copy { flex:1; min-width:0; display:flex; flex-direction:column; gap:5px; }
+.mention-heading { display:flex; align-items:center; gap:8px; min-width:0; }
+.mention-heading b { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mention-heading small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.72rem; opacity:.68; }
+.mention-preview { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.76rem; opacity:.82; }
+.mention-time { flex:none; font-size:.72rem; opacity:.7; }
+.mention-empty { max-width:440px; margin:auto; }
 @media (hover:none) { .message-reply { opacity:.8; } }
 .bubble.pending { opacity: 0.6; }
 .bubble[title] { cursor: default; }
@@ -232,7 +257,7 @@ div.conv-row { cursor: default; }
 .ws-dots i:nth-child(3) { animation-delay: 0.3s; }
 @keyframes ws-dot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.45; } 30% { transform: translateY(-4px); opacity: 1; } }
 
-.composer-wrap { flex: none; padding: 8px 14px 10px; border-top: 1px solid rgba(255,255,255,0.12); }
+.composer-wrap { position:relative; flex: none; padding: 8px 14px 10px; border-top: 1px solid rgba(255,255,255,0.12); }
 .composer { display: flex; gap: 8px; align-items: flex-end; }
 .composer textarea { resize: none; min-height: 40px; max-height: 120px; }
 .media-picker { position:fixed; z-index:10000; inset:0; display:grid; place-items:center; padding:18px; background:rgba(0,0,0,.78); }
@@ -368,7 +393,8 @@ body.profile-modal-open { overflow: hidden; backdrop-filter: none; -webkit-backd
         </div>
         <div class="thread" id="thread" role="log" aria-live="polite"></div>
         <div class="typing-row" id="typingRow" role="status" aria-live="polite"></div>
-        <div class="composer-wrap">
+        <div class="composer-wrap" id="composerWrap">
+          <div class="mention-picker" id="mentionPicker" role="listbox" aria-label="Friends you can mention" hidden></div>
           <div class="media-attachment" id="mediaAttachment" hidden>
             <span class="media-attachment-preview" id="mediaAttachmentPreview"></span>
             <span class="media-attachment-label">Media attached</span>
@@ -380,7 +406,7 @@ body.profile-modal-open { overflow: hidden; backdrop-filter: none; -webkit-backd
           </div>
           <form class="composer" id="composer" autocomplete="off">
             <button class="btn ghost" id="mediaBtn" type="button" title="Share media" aria-haspopup="dialog" aria-expanded="false"><i class="fa-regular fa-images" aria-hidden="true"></i> Media</button>
-            <textarea id="msg" rows="1" maxlength="500" placeholder="Message… (Enter to send)" aria-label="Message"></textarea>
+            <textarea id="msg" rows="1" maxlength="500" placeholder="Message… (Enter to send)" aria-label="Message" aria-autocomplete="list" aria-controls="mentionPicker" aria-expanded="false"></textarea>
             <button class="btn" id="sendBtn" type="submit"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Send</button>
           </form>
           <div class="count"><span id="left">500</span> characters left · <span id="keepNote">only the latest 60 messages are kept</span></div>
@@ -420,8 +446,8 @@ body.profile-modal-open { overflow: hidden; backdrop-filter: none; -webkit-backd
 <script src="../../js/ticket.js?v=account-role-shields"></script>
 <script src="../../js/themify.js?v=theme-fallback-favicon"></script>
 <script src="../../js/cursors.js"></script>
-<script src="../../js/msgcore.js?v=account-profile-isolation-2"></script>
+<script src="../../js/msgcore.js?v=profile-current-mentions-1"></script>
 <script src="../../js/profile-modal.js?v=profile-text-alignment-1"></script>
-<script src="../../js/chat.js?v=spotify-embed-v1"></script>
+<script src="../../js/chat.js?v=profile-live-mentions-1"></script>
 </body>
 </html>
