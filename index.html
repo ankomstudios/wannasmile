@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>
+// This file lives at the site root beside system/.
+// WS_SITE_ROOT anchors site-relative code paths during local development.
+(function () {
+  window.WS_SITE_ROOT = new URL("./", location.href).href;
+})();
+</script>
+<script src="system/js/desktop.js"></script>
+<link id="favicon" rel="icon" type="image/png" href="https://raw.githubusercontent.com/securlydetected/assets/refs/heads/main/favicons/favicon.png" />
+<title>WannaSmile | Project Hub</title>
+
+<!-- Public library data is served by the SQL Worker. -->
+<link rel="preconnect" href="https://api.ankomstudios.com" crossorigin />
+<!-- Images, themes and the loader gif come from raw.githubusercontent.com; the
+     CDN hosts serve Shoelace and Font Awesome. Warm those connections up too. -->
+<link rel="preconnect" href="https://raw.githubusercontent.com" crossorigin />
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
+<!-- Icons (main.js would add this same link later): start it now, without blocking render. -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" media="print" onload="this.media='all'" />
+<noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" /></noscript>
+
+<!-- The disabled word-filter endpoint is configured before optional site scripts. -->
+<script src="system/js/endpoints.js"></script>
+<script src="system/js/wordfilter.js"></script>
+
+<script>
+// Start the public SQL asset fetch now, while styles and scripts load.
+(function () {
+  window.WS_SHEET_URL = window.WS_ENDPOINTS.library;   // consumed by main.js
+  try {
+    window._devBuildArmedAtLoad = localStorage.getItem("ws_devBuildArmed") === "true";
+    var url = window.WS_SHEET_URL;
+    var requestUrl = new URL(url, location.href);
+    requestUrl.searchParams.set("_", String(Date.now()));
+    var controller = new AbortController();
+    var timeout = setTimeout(function () { controller.abort(); }, 12000);
+    var p = fetch(requestUrl.href, { cache: "no-store", signal: controller.signal })
+      .then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      })
+      .finally(function () { clearTimeout(timeout); });
+    p.catch(function () {}); // handled by loadAssets; silences "unhandled rejection" if unused
+    window.__wsAssetsPrefetch = { url: url, promise: p };
+  } catch (_) { window.__wsAssetsPrefetch = null; }
+})();
+</script>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.9.0/cdn/themes/dark.css" media="print" onload="this.media='all'" />
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.9.0/cdn/themes/dark.css" /></noscript>
+<!-- Shoelace components (sl-alert for achievement pop-ups, credits.js). -->
+<script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.9.0/cdn/shoelace-autoloader.js"></script>
+<link rel="stylesheet" href="system/css/main.css" />
+<link rel="stylesheet" href="system/css/widgets.css" />
+<link rel="stylesheet" href="system/css/shortcuts.css" />
+<link rel="stylesheet" href="system/css/daily.css" />
+<link rel="stylesheet" href="system/css/rusure.css" />
+<link rel="stylesheet" href="system/css/refer.css" />
+<link rel="stylesheet" href="system/css/tutorial.css" />
+<link rel="stylesheet" href="system/css/profile.css" />
+<link rel="stylesheet" href="system/css/updates.css" />
+
+<script>
+// Preload whichever theme is actually cached as active (see themify.js's
+// ws_theme_cache), instead of always warming up Nexus's images regardless
+// of what the user actually last used. Falls back to Nexus's own images on
+// a first-ever visit, when nothing has been cached yet.
+(function () {
+  // No approved ticket = the ticket / onboarding screen is up and the page
+  // behind it isn't drawn, so these images would sit unused and the browser
+  // warns "preloaded but not used". Only preload for people past the gate.
+  try { if (localStorage.getItem("ws_ticket_status") !== "approved") return; } catch (_) { return; }
+
+  var FALLBACK = [
+    "https://ws.ankomstudios.com/themes/nexus/header/splash.png",
+    "https://ws.ankomstudios.com/themes/nexus/quote/splash.png",
+    "https://ws.ankomstudios.com/themes/nexus/main/splash.png",
+    "https://ws.ankomstudios.com/themes/nexus/footer/splash.png"
+  ];
+
+  function isPreloadableImage(v) {
+    v = (v == null ? "" : String(v)).trim();
+    return /^(https?:)?\/\//i.test(v) || v.indexOf("data:") === 0;
+  }
+
+  // Resolve legacy asset URLs against the hosted asset origin; this build has
+  // no local assets directory.
+  var LIVE_SITE_RE = /^https?:\/\/(?:wannasmile4evr|vvannazmile)\.github\.io\.?\//i;
+  var onLiveSite   = /^(?:wannasmile4evr|vvannazmile)\.github\.io\.?$/i.test(location.hostname);
+  function localize(v) {
+    if (onLiveSite) return v;
+    var assetUrl = window.toSiteAsset(v);
+    if (assetUrl !== v) return assetUrl;
+    return new URL(String(v).trim().replace(LIVE_SITE_RE, ""), new URL(window.WS_SITE_ROOT)).href;
+  }
+
+  var urls = null;
+  try {
+    var selectedId = (localStorage.getItem("selectedTheme") || "nexus").trim().toLowerCase();
+    var explicitlyApplied = localStorage.getItem("ws_theme_explicit") === "1";
+    var activeId = selectedId === "redux" && !explicitlyApplied ? "nexus" : selectedId;
+    var cache    = JSON.parse(localStorage.getItem("ws_theme_cache") || "{}");
+    var row      = cache && typeof cache === "object" && activeId !== "nexus" ? cache[activeId] : null;
+    if (row) urls = [row[3], row[4], row[5], row[6]].filter(isPreloadableImage);
+  } catch (_) { urls = null; }
+
+  (urls && urls.length ? urls : FALLBACK).forEach(function (href) {
+    var link = document.createElement("link");
+    link.rel  = "preload";
+    link.as   = "image";
+    link.href = localize(window.toMediabase(href));
+    document.head.appendChild(link);
+  });
+})();
+
+// Same idea for the active gif pack (see themify.js's ws_gifpack_cache) — the
+// loader gif is the very first thing visible on load, so warm up whichever
+// pack the user actually has active instead of always fetching redux's and
+// letting it sit there until the real one swaps in.
+(function () {
+  // Same gate as above: nothing to warm up behind the ticket screen.
+  try { if (localStorage.getItem("ws_ticket_status") !== "approved") return; } catch (_) { return; }
+
+  var FALLBACK = ["https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/main/gif-packs/redux/loading.gif", "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/main/gif-packs/redux/loaded.gif"];
+
+  var urls = null, mineActive = false;
+  try {
+    var activeId = (localStorage.getItem("ws_active_gifpack") || "redux").trim().toLowerCase();
+    var cache    = JSON.parse(localStorage.getItem("ws_gifpack_cache") || "{}");
+    var pack     = cache && typeof cache === "object" ? cache[activeId] : null;
+    var states   = pack && pack.states ? pack.states : null;
+    // One of the user's own gif packs (data: gifs, ws_custom_gifpacks) needs
+    // no download at all, so don't preload redux's while it's active.
+    if (!states && activeId.indexOf("my-") === 0) {
+      var mine = JSON.parse(localStorage.getItem("ws_custom_gifpacks") || "{}");
+      if (mine && mine[activeId]) { urls = []; mineActive = true; }
+    }
+    if (states) {
+      urls = ["loading", "loaded"]
+        .map(function (key) { return states[key] && states[key].src; })
+        .filter(Boolean);
+    }
+  } catch (_) { urls = null; }
+
+  (urls && (urls.length || mineActive) ? urls : FALLBACK).forEach(function (href) {
+    var link = document.createElement("link");
+    link.rel  = "preload";
+    link.as   = "image";
+    link.href = window.toMediabase(href);
+    document.head.appendChild(link);
+  });
+})();
+</script>
+
+</head>
+
+<body class="ws-loading">
+
+<div id="incognitoIndicator">blob:null mode</div>
+<div id="topBar">
+  <header>
+    <nav class="nav-links">
+      <a href="./" target="_blank">Home</a>
+      <a href="system/pages/discovery/index.html" target="_blank">Discovery</a>
+      <a href="system/pages/settings/index.html" target="_blank">Settings</a>
+      <a href="https://padlet.com/ankomstudios/wannasmile4evr-s023ilquhanqla56127i" target="_blank">Suggestions</a>
+      <!-- Ads and Partnerships: page not made yet. -->
+      <!-- <a href="#" title="Coming soon">Ads and Partnerships</a> -->
+      <div class="pages-anchor">
+        <button class="arrowleft" onclick="prevPage()">
+          <img src="https://raw.githubusercontent.com/securlydetected/assets/refs/heads/main/header-arrows/left-arrow.png" />
+        </button>
+        <span class="page-indicator">...</span>
+        <button class="arrowright" onclick="nextPage()">
+          <img src="https://raw.githubusercontent.com/securlydetected/assets/refs/heads/main/header-arrows/right-arrow.png" />
+        </button>
+        <a href="system/pages/store/index.html" target="_blank">STORE</a>
+        <a href="system/pages/news/index.html" target="_blank">NEWS</a>
+
+        <button class="mute-btn">
+          <img src="https://raw.githubusercontent.com/securlydetected/assets/refs/heads/main/audio-toggle-btn/mute.png" id="muteToggleImg" />
+        </button>
+
+        <button class="Qtype">
+          <img src="https://raw.githubusercontent.com/securlydetected/assets/refs/heads/main/qtype/Qleft.png" id="QtypeToggle" />
+        </button>
+
+        <button id="nes-btn">
+          <img src="https://raw.githubusercontent.com/securlydetected/assets/refs/heads/main/panic-btn/deny.png" alt="Toggle">
+        </button>
+
+<button id="cloak-btn">
+  <img src="https://raw.githubusercontent.com/securlydetected/assets/refs/heads/main/cloak-btn/cloaked.png" alt="CloakToggle">
+</button>
+
+<button id="fav-btn" title="Show favorites" aria-pressed="false">
+  <img src="https://raw.githubusercontent.com/securlydetected/assets/refs/heads/main/fav-btn/unfav.gif" alt="Favorites toggle">
+</button>
+
+        <button type="button" id="openDailyPicks" class="hdr-icon-btn" title="Daily picks" aria-label="Daily picks">
+          <img src="https://raw.githubusercontent.com/securlydetected/assets/refs/heads/main/header-icons/daily.png" alt="" />
+        </button>
+
+        <button type="button" id="openShortCuts" class="hdr-icon-btn" title="Shortcuts" aria-label="Keyboard shortcuts">
+          <img src="https://raw.githubusercontent.com/securlydetected/assets/refs/heads/main/header-icons/shortcuts.png" alt="" />
+        </button>
+
+        <button type="button" id="openDm" class="hdr-icon-btn" title="Chat (DMs)" aria-label="Open WannaChat">
+          <img src="https://raw.githubusercontent.com/securlydetected/assets/refs/heads/main/header-icons/dm.png" alt="" />
+        </button>
+
+      </div>
+    </nav>
+    <div class="header-controls">
+      <div class="search-box">
+        <input id="searchInputHeader" type="text" placeholder="Search..." />
+        <button id="searchBtnHeader" aria-haspopup="true" aria-expanded="false">
+          <img src="https://raw.githubusercontent.com/5lackerish/5lackerish.github.io/main/system/images/icons/search.png" />
+        </button>
+        <div id="searchCategoryMenu" class="search-category-menu" aria-hidden="true">
+          <p class="search-category-heading">Categories</p>
+          <div id="searchCategoryList" class="search-category-list"></div>
+          <p class="search-category-heading">Sub-categories</p>
+          <div id="searchSubcategoryList" class="search-category-list"></div>
+        </div>
+      </div>
+      <img id="pfp" src="https://raw.githubusercontent.com/mcmattyobriore/yogurtyooo.github.io/main/system/images/profile/smile.png" />
+      <button id="dashboardBtn">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+    </div>
+  </header>
+  <div id="quoteWrapper">
+    <p id="quoteBox"></p>
+  </div>
+</div>
+
+<aside id="dashboardMenu" class="dashboard-menu">
+  <div id="dashIdRow" class="dash-id-row">
+    <span class="dash-names">
+      <span id="dashNickname" title="Your nickname">Guest</span>
+      <span id="dashUsername" title="Your account username"></span>
+    </span>
+    <code id="dashTicketId" role="button" tabindex="0" hidden></code>
+  </div>
+  <a href="#" id="openUpdates" title="View project updates">Project updates</a>
+    <a href="system/pages/credits-n-achievements/index.html" target="_blank" id="openCredits" title="Your credits, achievements and early unlocks">Credits &amp; achievements</a>
+  <a href="#" id="openRefer" title="Share WannaSmile with a friend">Refer a friend</a>
+    <a href="#" id="openTour" title="Walk through the site again">Tutorial</a>
+  <a href="#" id="clearData">Clear My Data</a>
+</aside>
+
+<div id="containerLoader">
+  <img src="https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/main/gif-packs/redux/loading.gif" alt="loading..." />
+</div>
+
+<main>
+  <div id="container"></div>
+</main>
+
+<button id="toTopBtn">⬆ Top</button>
+
+<button id="wsWidgetBubble" aria-label="Open widget">
+  <img id="wsWidgetIcon" src="" alt="" />
+</button>
+<div id="wsWidgetPanel">
+  <div id="wsWidgetBtns">
+    <button class="ss-panel-btn" id="wsWidgetFsBtn"    title="Fullscreen">⛶</button>
+    <button class="ss-panel-btn" id="wsWidgetMinBtn"   title="Minimize">−</button>
+    <button class="ss-panel-btn" id="wsWidgetCloseBtn" title="Close">✕</button>
+  </div>
+  <div id="wsWidgetFrameWrap"></div>
+  <div id="wsWidgetResizeHandle"></div>
+</div>
+
+<footer class="footer">
+  <div class="footer-links">
+    <a href="https://github.com/vvannazmile/vvannazmile.github.io" target="_blank" rel="noopener noreferrer">Source code</a>
+    <a href="system/pages/dmca/index.html" target="_blank">DMCA</a>
+    <a href="https://discord.gg/6DxVZqKYtJ" target="_blank">Discord</a>
+    <a href="system/pages/download/index.html" target="_blank" data-ws-browser-only>Desktop app</a>
+<a href="#" id="importData">Import Data</a>
+<a href="#" id="exportData">Export Data</a>
+<a href="#" id="transData">Transfer Data</a>
+    <a href="#" id="footerVersion">Project version</a>
+  </div>
+</footer>
+
+<div id="profileModal" class="pfm" role="dialog" aria-modal="true" aria-label="Profile" aria-hidden="true" data-stage="view" tabindex="-1">
+  <div class="pfm-stage">
+    <div class="pfm-card" id="profileModalCard" data-loading="true">
+      <iframe id="profileModalFrame" class="pfm-frame" title="Profile" src="about:blank"></iframe>
+    </div>
+    <div class="pfm-actions" role="group" aria-label="Profile actions">
+      <button type="button" id="profileModalPrimary" class="pfm-btn pfm-btn-primary" data-mode="view"><i class="fa-solid fa-pen" aria-hidden="true"></i> <span>Edit</span></button>
+      <button type="button" id="profileModalSecondary" class="pfm-btn" data-mode="view"><i class="fa-solid fa-xmark" aria-hidden="true"></i> <span>Close</span></button>
+    </div>
+  </div>
+</div>
+
+<div id="updatesOverlay" class="upd-overlay" role="dialog" aria-modal="true" aria-labelledby="updatesTitle" hidden>
+  <div class="upd-backdrop" id="updatesBackdrop"></div>
+  <div id="updatesPanel" tabindex="-1">
+    <img class="upd-banner" src="https://ws.ankomstudios.com/images/pages/release/wannasmile-updated-banner.png" alt="" />
+    <h2 class="upd-title" id="updatesTitle">Project updates</h2>
+    <img class="upd-sticker" src="https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/main/stickers/MeltGui-pack/cheer.webp" alt="" />
+    <ul class="upd-list">
+      <li>WannaChat now supports direct messages</li>
+      <li>Unread messages are indicated in the header</li>
+      <li>Library pages 11&ndash;15 have been refreshed</li>
+      <li>Account registration is available</li>
+      <li>Seasonal assets and interface updates</li>
+      <li>Additional project updates are in development</li>
+      <li>Development outlook</li>
+      <li>Project updates are announced when available</li>
+    </ul>
+    <div class="upd-actions">
+      <button type="button" id="updatesDismiss" class="upd-btn upd-btn-ghost">Don't show again</button>
+      <button type="button" id="updatesReadMore" class="upd-btn upd-btn-primary">View all updates</button>
+    </div>
+  </div>
+</div>
+
+<script defer src="system/js/utils.js"></script>
+<script defer src="system/js/datacache.js"></script>
+<script defer src="system/js/paging.js"></script>
+<script defer src="system/js/ticket.js"></script>
+<script defer src="system/js/themify.js"></script>
+<script defer src="system/js/frames.js"></script>
+<script defer src="system/js/wrappers.js"></script>
+<script defer src="system/js/cursors.js"></script>
+<script defer src="system/js/sanitizer.js"></script>
+<script defer src="system/js/profile.js"></script>
+<script defer src="system/js/profile-modal.js"></script>
+<script defer src="system/js/msgcore.js"></script>
+<script defer src="system/js/settings.js"></script>
+<script defer src="system/js/ui.js"></script>
+<script defer src="system/js/stickers.js"></script>
+<script defer src="system/js/quotes.js"></script>
+<script defer src="system/js/main.js"></script>
+<script defer src="system/js/boom.js"></script>
+<script defer src="system/js/panic.js"></script>
+<script defer src="system/js/shortcuts.js"></script>
+<script defer src="system/js/widgets.js"></script>
+<script defer src="system/js/rusure.js"></script>
+<script defer src="system/js/vendor/qrcode.js"></script>
+<script defer src="system/js/refer.js"></script>
+<script defer src="system/js/updates.js"></script>
+<script defer src="system/js/data.js"></script>
+<script defer src="system/js/gridSettings.js"></script>
+<script defer src="system/js/credits.js"></script>
+<script defer src="system/js/devtools.js"></script>
+<script defer src="system/js/tutorial.js"></script>
+<script defer src="system/js/daily.js"></script>
+<script defer src="system/js/version.js"></script>
+
+</body>
+</html>

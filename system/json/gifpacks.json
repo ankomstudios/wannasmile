@@ -1,0 +1,90 @@
+[
+  {
+    "name": "Bat",
+    "id": "bat",
+    "loading": "128|128|true",
+    "loaded": "128|128|true",
+    "searching": "128|128|true",
+    "held": "128|128|true",
+    "drop": "128|128|true",
+    "crash": "128|128|true",
+    "ded": "128|128|true"
+  },
+  {
+    "name": "Classic",
+    "id": "classic",
+    "loading": "192|192|true",
+    "loaded": "192|192|true",
+    "searching": "",
+    "held": "",
+    "drop": "",
+    "crash": "",
+    "ded": ""
+  },
+  {
+    "name": "GN Math",
+    "id": "gn-math",
+    "loading": "128|128|true",
+    "loaded": "128|128|true",
+    "searching": "128|128|true",
+    "held": "128|128|true",
+    "drop": "128|128|true",
+    "crash": "128|128|true",
+    "ded": "128|128|true"
+  },
+  {
+    "name": "Graduation",
+    "id": "graduation",
+    "loading": "128|128|true",
+    "loaded": "128|128|true",
+    "searching": "128|128|true",
+    "held": "128|128|true",
+    "drop": "128|128|true",
+    "crash": "128|128|true",
+    "ded": "128|128|true"
+  },
+  {
+    "name": "IGOR",
+    "id": "igor",
+    "loading": "128|128|true",
+    "loaded": "128|128|true",
+    "searching": "128|128|true",
+    "held": "128|128|true",
+    "drop": "128|128|true",
+    "crash": "128|128|true",
+    "ded": "128|128|true"
+  },
+  {
+    "name": "Redux",
+    "id": "redux",
+    "loading": "128|128|true",
+    "loaded": "128|128|true",
+    "searching": "128|128|true",
+    "held": "128|128|true",
+    "drop": "128|128|true",
+    "crash": "128|128|true",
+    "ded": "128|128|true"
+  },
+  {
+    "name": "Selenite",
+    "id": "selenite",
+    "loading": "128|128|true",
+    "loaded": "128|128|true",
+    "searching": "128|128|true",
+    "held": "128|128|true",
+    "drop": "128|128|true",
+    "crash": "128|128|true",
+    "ded": "128|128|true"
+  },
+  {
+    "name": "Slackerish",
+    "id": "slackerish",
+    "loading": "128|128|true",
+    "loaded": "128|128|true",
+    "searching": "128|128|true",
+    "held": "128|128|true",
+    "drop": "128|128|true",
+    "crash": "128|128|true",
+    "ded": "128|128|true"
+  }
+]

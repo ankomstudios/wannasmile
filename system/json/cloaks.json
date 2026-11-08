@@ -1,0 +1,50 @@
+[
+  {
+    "id": "google",
+    "title": "Google",
+    "icon": "https://ws.ankomstudios.com/cloaks/google.png",
+    "metadata": {}
+  },
+  {
+    "id": "drive",
+    "title": "My Drive - Google Drive",
+    "icon": "https://ws.ankomstudios.com/cloaks/drive.png",
+    "metadata": {}
+  },
+  {
+    "id": "classroom",
+    "title": "Classes",
+    "icon": "https://ws.ankomstudios.com/cloaks/classroom.png",
+    "metadata": {}
+  },
+  {
+    "id": "newtab",
+    "title": "New Tab",
+    "icon": "https://ws.ankomstudios.com/cloaks/newtab.png",
+    "metadata": {}
+  },
+  {
+    "id": "docs",
+    "title": "Untitled document - Google Docs",
+    "icon": "https://ws.ankomstudios.com/cloaks/docs.png",
+    "metadata": {}
+  },
+  {
+    "id": "schoology",
+    "title": "Schoology",
+    "icon": "https://ws.ankomstudios.com/cloaks/schoology.png",
+    "metadata": {}
+  },
+  {
+    "id": "outlook",
+    "title": "Outlook – Mail",
+    "icon": "https://ws.ankomstudios.com/cloaks/outlook.png",
+    "metadata": {}
+  },
+  {
+    "id": "canvas",
+    "title": "Dashboard – Canvas",
+    "icon": "https://ws.ankomstudios.com/cloaks/canvas.png",
+    "metadata": {}
+  }
+]

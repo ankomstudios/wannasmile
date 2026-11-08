@@ -1,0 +1,20 @@
+[
+  {
+    "id": "golden",
+    "name": "Golden",
+    "type": "static",
+    "ext": "png",
+    "animated": "FALSE",
+    "scale": "1.2",
+    "pixelated": "FALSE"
+  },
+  {
+    "id": "eyepatch",
+    "name": "Yar!!",
+    "type": "static",
+    "ext": "png",
+    "animated": "FALSE",
+    "scale": "1.8",
+    "pixelated": "FALSE"
+  }
+]

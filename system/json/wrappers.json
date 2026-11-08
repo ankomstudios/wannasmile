@@ -1,0 +1,122 @@
+[
+  {
+    "id": "afterlife",
+    "name": "Afterlife",
+    "type": "",
+    "ext": "jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "id": "antidote",
+    "name": "Antidote",
+    "type": "",
+    "ext": "jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "id": "bad",
+    "name": "Bad",
+    "type": "",
+    "ext": "jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "id": "chime-scene",
+    "name": "Chime Scene",
+    "type": "",
+    "ext": "jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "id": "dramification",
+    "name": "Dramification",
+    "type": "",
+    "ext": "jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "id": "eulavania",
+    "name": "Eulavania",
+    "type": "",
+    "ext": "jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "id": "falling-cards",
+    "name": "Falling Cards",
+    "type": "",
+    "ext": "gif",
+    "animated": "TRUE",
+    "pixelated": "FALSE"
+  },
+  {
+    "id": "frame-of-existance",
+    "name": "Frame Of Existance",
+    "type": "",
+    "ext": "jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "id": "ghost-story",
+    "name": "Ghost Story",
+    "type": "",
+    "ext": "jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "id": "jackpot",
+    "name": "Jackpot",
+    "type": "",
+    "ext": "jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "id": "joker-poker",
+    "name": "Joker Poker",
+    "type": "",
+    "ext": "jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "id": "most-wanted",
+    "name": "Most Wanted",
+    "type": "",
+    "ext": "jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "id": "playhouse",
+    "name": "Playhouse",
+    "type": "",
+    "ext": "jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "id": "sinister",
+    "name": "Sinister",
+    "type": "",
+    "ext": "jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "id": "venomous",
+    "name": "Venomous",
+    "type": "",
+    "ext": "jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  }
+]

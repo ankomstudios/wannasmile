@@ -1,0 +1,353 @@
+[
+  {
+    "name": "A Distant Mars",
+    "identification": "a-distant-mars",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/a-distant-mars/splash.jpg",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/a-distant-mars/splash.jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "A Punk Future",
+    "identification": "a-punk-future",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/a-punk-future/splash.gif",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/a-punk-future/splash.gif",
+    "animated": "TRUE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Autumns Ghostface",
+    "identification": "autumns-ghostface",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/autumns-ghostface/splash.jpg",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/autumns-ghostface/splash.jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Autumns Joy",
+    "identification": "autumns-joy",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/autumns-joy/splash.gif",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/autumns-joy/splash.gif",
+    "animated": "TRUE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Bizzaros Nimbus",
+    "identification": "bizzaros-nimbus",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/bizzaros-nimbus/splash.gif",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/bizzaros-nimbus/splash.gif",
+    "animated": "TRUE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Buni",
+    "identification": "buni",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/buni/splash.jpg",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/buni/splash.jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Candy Candy",
+    "identification": "candy-candy",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/candy-candy/splash.jpg",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/candy-candy/splash.jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Carnival",
+    "identification": "carnival",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/carnival/splash.gif",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/carnival/splash.gif",
+    "animated": "TRUE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Chowder",
+    "identification": "chowder",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/chowder/splash.jpg",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/chowder/splash.jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Chrome To The Bone",
+    "identification": "chrome-to-the-bone",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/chrome-to-the-bone/splash.jpg",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/chrome-to-the-bone/splash.jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Coridore",
+    "identification": "coridore",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/coridore/splash.jpg",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/coridore/splash.jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Crimson Odyssey",
+    "identification": "crimson-odyssey",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/crimson-odyssey/splash.gif",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/crimson-odyssey/splash.gif",
+    "animated": "TRUE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Dancing In The Soul Light",
+    "identification": "dancing-in-the-soul-light",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/dancing-in-the-soul-light/splash.gif",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/dancing-in-the-soul-light/splash.gif",
+    "animated": "TRUE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Deaths Highway",
+    "identification": "deaths-highway",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/deaths-highway/splash.jpg",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/deaths-highway/splash.jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Dream Dream",
+    "identification": "dream-dream",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/dream-dream/splash.jpg",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/dream-dream/splash.jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Empires Soul",
+    "identification": "empires-soul",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/empires-soul/splash.gif",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/empires-soul/splash.gif",
+    "animated": "TRUE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Eternal Flame",
+    "identification": "eternal-flame",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/eternal-flame/splash.gif",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/eternal-flame/splash.gif",
+    "animated": "TRUE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Facecardi Jokery",
+    "identification": "facecardi-jokery",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/facecardi-jokery/splash.jpg",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/facecardi-jokery/splash.jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Flowertime",
+    "identification": "flowertime",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/flowertime/splash.gif",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/flowertime/splash.gif",
+    "animated": "TRUE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Funghoul",
+    "identification": "funghoul",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/funghoul/splash.gif",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/funghoul/splash.gif",
+    "animated": "TRUE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Hang Man",
+    "identification": "hang-man",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/hang-man/splash.jpg",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/hang-man/splash.jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Here Lies",
+    "identification": "here-lies",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/here-lies/splash.jpg",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/here-lies/splash.jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Moonlight Sunray",
+    "identification": "moonlight-sunray",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/moonlight-sunray/splash.gif",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/moonlight-sunray/splash.gif",
+    "animated": "TRUE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Pheonix Sour",
+    "identification": "pheonix-sour",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/pheonix-sour/splash.gif",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/pheonix-sour/splash.gif",
+    "animated": "TRUE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Road Trip",
+    "identification": "road-trip",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/road-trip/splash.gif",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/road-trip/splash.gif",
+    "animated": "TRUE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Skull Full Of Krainium",
+    "identification": "skull-full-of-krainium",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/skull-full-of-krainium/splash.gif",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/skull-full-of-krainium/splash.gif",
+    "animated": "TRUE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Skull To Crossbones",
+    "identification": "skull-to-crossbones",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/skull-to-crossbones/splash.gif",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/skull-to-crossbones/splash.gif",
+    "animated": "TRUE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Soul Silver",
+    "identification": "soul-silver",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/soul-silver/splash.jpg",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/soul-silver/splash.jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Spiral Of Reflection",
+    "identification": "spiral-of-reflection",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/spiral-of-reflection/splash.gif",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/spiral-of-reflection/splash.gif",
+    "animated": "TRUE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Syndicate",
+    "identification": "syndicate",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/syndicate/splash.jpg",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/syndicate/splash.jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Thawedtodabase",
+    "identification": "thawedtodabase",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/thawedtodabase/splash.jpg",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/thawedtodabase/splash.jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "The Pastful Presentful Future",
+    "identification": "the-pastful-presentful-future",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/the-pastful-presentful-future/splash.jpg",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/the-pastful-presentful-future/splash.jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "The Weaping",
+    "identification": "the-weaping",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/the-weaping/splash.jpg",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/the-weaping/splash.jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Toot A Horn",
+    "identification": "toot-a-horn",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/toot-a-horn/splash.gif",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/toot-a-horn/splash.gif",
+    "animated": "TRUE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Tropical Luminisence",
+    "identification": "tropical-luminisence",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/tropical-luminisence/splash.jpg",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/tropical-luminisence/splash.jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Vegas Racing",
+    "identification": "vegas-racing",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/vegas-racing/splash.gif",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/vegas-racing/splash.gif",
+    "animated": "TRUE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Vintrilaquest",
+    "identification": "vintrilaquest",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/vintrilaquest/splash.jpg",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/vintrilaquest/splash.jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Walk In The Park",
+    "identification": "walk-in-the-park",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/walk-in-the-park/splash.jpg",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/walk-in-the-park/splash.jpg",
+    "animated": "FALSE",
+    "pixelated": "FALSE"
+  },
+  {
+    "name": "Witch Hut",
+    "identification": "witch-hut",
+    "type": "ok",
+    "src": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/witch-hut/splash.gif",
+    "thumb": "https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/refs/heads/main/banners/witch-hut/splash.gif",
+    "animated": "TRUE",
+    "pixelated": "FALSE"
+  }
+]

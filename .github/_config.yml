@@ -1,0 +1,3 @@
+# Keep the desktop app source (C++, installer script) out of the published site.
+exclude:
+  - desktop

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script src="../../js/desktop.js"></script>
+<link id="favicon" rel="icon" type="image/png" href="https://raw.githubusercontent.com/securlydetected/assets/refs/heads/main/favicons/ico.png" />
+<title>WannaSmile | Messages</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+<style>
+/* A standalone inbox page (not a modal): a slim top bar, then a conversation
+   list on the left and the open conversation on the right, filling the window.
+   Colours still come from the active theme (themify.js). */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html {
+  height: 100%;
+  background: var(--main-bg, #111) center / cover fixed no-repeat;
+  background-color: #111;
+  overflow: hidden;
+}
+/* The active theme's background didn't load (themify.js): local Redux copy. */
+html.ws-bg-fallback { background-image: url("https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/main/themes/redux/mainBg.png"); }
+body {
+  height: 100vh; height: 100dvh;
+  display: flex; flex-direction: column;
+  font-family: monospace;
+  color: var(--url-color, #fff);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+}
+a { color: inherit; }
+button, input, textarea { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+
+/* ── Top bar ── */
+.topbar {
+  flex: none; display: flex; align-items: center; gap: 14px;
+  padding: 10px 16px; min-height: 52px;
+  background: var(--aside-bg, rgba(0,0,0,0.92));
+  border-bottom: 2px solid var(--accent-color, #f44);
+}
+.back {
+  display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-weight: bold; font-size: 0.82rem;
+  padding: 6px 12px; border-radius: 999px; border: 2px solid rgba(255,255,255,0.3);
+  transition: border-color 0.15s, color 0.15s;
+}
+.back:hover, .back:focus-visible { border-color: var(--accent-color, #f44); color: var(--accent-color, #f44); outline: none; }
+.topbar h1 { font-size: 1.1rem; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topbar h1 .badge {
+  display: inline-block; min-width: 20px; padding: 0 6px; margin-left: 8px; border-radius: 999px;
+  background: var(--accent-color, #f44); color: #fff; font-size: 0.72rem; line-height: 20px; text-align: center; vertical-align: 2px;
+}
+.status {
+  display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.35); font-weight: bold; font-size: 0.72rem;
+}
+.status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #f5c542; }
+.status.live::before { background: #4cd08a; }
+.status.off::before  { background: #ff6b6b; }
+.status.sync::before { animation: blink 1.4s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0.25; } }
+
+/* ── Buttons / inputs ── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 8px 14px; border-radius: 999px; cursor: pointer; text-decoration: none;
+  border: 2px solid var(--accent-color, #f44); background: var(--accent-color, #f44); color: #fff;
+  font: bold 0.82rem monospace;
+  transition: filter 0.12s ease, transform 0.12s ease;
+}
+.btn:hover { filter: brightness(1.12); }
+.btn:active { transform: translateY(1px); }
+.btn.ghost { background: transparent; color: var(--url-color, #fff); border-color: rgba(255,255,255,0.35); }
+.btn.ghost:hover { border-color: var(--accent-color, #f44); color: var(--accent-color, #f44); filter: none; }
+.btn.sm { padding: 4px 10px; font-size: 0.75rem; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn:focus-visible, .conv-row:focus-visible { outline: 3px solid var(--url-color, #fff); outline-offset: 1px; }
+input[type="text"], textarea {
+  width: 100%; padding: 9px 12px; border-radius: 14px;
+  border: 2px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.06); outline: none;
+}
+input[type="text"]:focus, textarea:focus { border-color: var(--accent-color, #f44); }
+::placeholder { color: inherit; opacity: 0.5; }
+
+/* ── Gate (not signed in / server not ready) ── */
+.gate { margin: 24px auto; width: min(560px, calc(100% - 32px)); padding: 20px; border-radius: 14px;
+  border: 2px dashed rgba(255,255,255,0.35); background: var(--aside-bg, rgba(0,0,0,0.92)); }
+.gate h2 { font-size: 1.1rem; margin-bottom: 10px; }
+.gate .row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.gate p { flex: 1; min-width: 220px; font-size: 0.85rem; line-height: 1.7; }
+
+/* ── Inbox ── */
+.inbox { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(260px, 340px) 1fr; }
+.side, .conv { min-height: 0; min-width: 0; display: flex; flex-direction: column; background: var(--aside-bg, rgba(0,0,0,0.88)); }
+.side { border-right: 2px solid rgba(255,255,255,0.14); }
+
+.pf { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.12); }
+.pf .who { min-width: 0; }
+.pf b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf small { opacity: 0.65; font-size: 0.72rem; }
+.add { display: flex; gap: 8px; padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.12); }
+.list { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
+.group { font-size: 0.68rem; font-weight: bold; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.65; padding: 12px 14px 4px; }
+.empty { text-align: center; opacity: 0.65; padding: 22px 14px; font-size: 0.82rem; line-height: 1.6; }
+
+/* avatars (WS_Msg.avatar) */
+.ws-av { flex: none; width: 40px; height: 40px; border-radius: 50%; overflow: hidden; display: inline-grid; place-items: center;
+  background: rgba(255,255,255,0.12); border: 2px solid var(--accent-color, #f44); font: bold 16px monospace; position: relative; }
+.ws-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ws-av.sm { width: 32px; height: 32px; font-size: 13px; }
+
+/* conversation rows */
+.conv-row {
+  width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 14px; text-align: left; cursor: pointer;
+  background: none; border: 0; border-left: 4px solid transparent; border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+div.conv-row { cursor: default; }
+.conv-row:hover { background: rgba(255,255,255,0.06); }
+.conv-row.on { background: rgba(255,255,255,0.12); border-left-color: var(--accent-color, #f44); }
+.conv-row .tx { flex: 1; min-width: 0; }
+.conv-row .nm { display: block; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.conv-row .pv { display: block; font-size: 0.74rem; opacity: 0.7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
+.conv-row.unread .nm { color: var(--accent-color, #f44); }
+.conv-row.unread .pv { opacity: 1; font-weight: bold; }
+.conv-row .pv.typing { color: var(--accent-color, #f44); opacity: 1; font-style: italic; }
+.conv-row .meta { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; font-size: 0.66rem; opacity: 0.8; }
+.dot { min-width: 10px; height: 10px; border-radius: 999px; background: var(--accent-color, #f44); }
+
+/* conversation pane */
+.idle { flex: 1; display: grid; place-items: center; text-align: center; opacity: 0.7; font-size: 0.85rem; line-height: 1.7; padding: 20px; }
+.idle i { display: block; font-size: 2.2rem; margin-bottom: 10px; color: var(--accent-color, #f44); }
+.convbody { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.head { flex: none; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.12); }
+.head .who { flex: 1; min-width: 0; }
+.head .who b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.head .who small { display: block; font-size: 0.72rem; opacity: 0.7; min-height: 1.2em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.head .who small.typing { color: var(--accent-color, #f44); opacity: 1; font-style: italic; }
+.head .cap { font-size: 0.7rem; opacity: 0.6; }
+#backBtn { display: none; }
+
+.thread { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; padding: 14px 16px 6px; display: flex; flex-direction: column; gap: 4px; }
+.day { align-self: center; margin: 10px 0 6px; font-size: 0.68rem; opacity: 0.7; padding: 2px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.25); }
+.note { align-self: center; font-size: 0.7rem; opacity: 0.6; margin-bottom: 4px; }
+.thread .empty { margin: auto; }
+
+/* a run of messages from one person: avatar beside it, name + time above */
+.grp { display: flex; align-items: flex-end; gap: 8px; margin-top: 10px; max-width: 82%; }
+.grp.them { align-self: flex-start; }
+.grp.me { align-self: flex-end; flex-direction: row-reverse; }
+.grp .stack { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.grp.me .stack { align-items: flex-end; }
+.grp .by { font-size: 0.7rem; opacity: 0.75; margin: 0 6px; }
+.grp .by b { font-size: 0.78rem; }
+.bubble { padding: 7px 12px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.45; font-size: 0.88rem; border: 2px solid rgba(255,255,255,0.18); max-width: 100%; }
+.them .bubble { background: rgba(255,255,255,0.09); border-radius: 16px 16px 16px 4px; }
+.them .bubble + .bubble { border-radius: 4px 16px 16px 4px; }
+.me .bubble { background: var(--accent-color, #f44); border-color: var(--accent-color, #f44); color: #fff; border-radius: 16px 16px 4px 16px; }
+.me .bubble + .bubble { border-radius: 16px 4px 4px 16px; }
+.bubble.pending { opacity: 0.6; }
+.bubble[title] { cursor: default; }
+.who-btn { background: none; border: 0; padding: 0; margin: 0; color: inherit; font: inherit; cursor: pointer; display: inline-flex; align-items: center; }
+.user-menu { position: fixed; z-index: 50; display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: 12px; background: #1c1c24; border: 1px solid rgba(255,255,255,0.18); box-shadow: 0 8px 24px rgba(0,0,0,0.45); }
+.user-menu[hidden] { display: none; }
+.um-head { display: flex; align-items: center; gap: 8px; }
+.um-who { display: flex; flex-direction: column; line-height: 1.2; }
+.um-who small { opacity: 0.7; }
+.global-av { display: inline-flex; align-items: center; justify-content: center; }
+
+/* "is typing" row, always reserves its height so nothing jumps */
+.typing-row { flex: none; min-height: 28px; display: flex; align-items: center; gap: 8px; padding: 2px 16px 4px; font-size: 0.76rem; font-style: italic; opacity: 0.9; }
+.ws-dots { display: inline-flex; gap: 3px; align-items: center; }
+.ws-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-color, #f44); animation: ws-dot 1.2s infinite ease-in-out; }
+.ws-dots i:nth-child(2) { animation-delay: 0.15s; }
+.ws-dots i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes ws-dot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.45; } 30% { transform: translateY(-4px); opacity: 1; } }
+
+.composer-wrap { flex: none; padding: 8px 14px 10px; border-top: 1px solid rgba(255,255,255,0.12); }
+.composer { display: flex; gap: 8px; align-items: flex-end; }
+.composer textarea { resize: none; min-height: 40px; max-height: 120px; }
+.count { font-size: 0.66rem; opacity: 0.55; margin-top: 4px; }
+
+@media (max-width: 760px) {
+  .inbox { grid-template-columns: 1fr; }
+  .inbox .conv { display: none; }
+  .inbox.open .side { display: none; }
+  .inbox.open .conv { display: flex; }
+  #backBtn { display: inline-flex; }
+  .grp { max-width: 94%; }
+  .back span { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .status.sync::before, .ws-dots i { animation: none; }
+}
+</style>
+</head>
+
+<body>
+<header class="topbar">
+  <a class="back" href="../../../" title="Back to WannaSmile"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i><span>WannaSmile</span></a>
+  <h1 id="chatTitle">Messages<span class="badge" id="unreadBadge" hidden>0</span></h1>
+  <span class="status sync" id="net" role="status">Connecting</span>
+</header>
+
+<!-- Not signed in / server not ready -->
+<section class="gate" id="gate" hidden aria-live="polite">
+  <h2><i class="fa-solid fa-lock" aria-hidden="true"></i> <span id="gateTitle">Sign in first</span></h2>
+  <div class="row">
+    <p id="gateText">Create an account or sign in on the WannaSmile homepage, then return here.</p>
+    <a class="btn" id="gateBtn" href="../../../"><i class="fa-solid fa-house" aria-hidden="true"></i> Go to WannaSmile</a>
+ </div>
+</section>
+
+<!-- Inbox -->
+<div id="app" style="display:contents" hidden>
+  <div class="inbox" id="chat">
+    <aside class="side" aria-label="Conversations">
+      <div class="pf">
+        <span id="meAvatar" aria-hidden="true"></span>
+        <div class="who"><b id="meName">…</b><small id="meUser">signed in with your account</small></div>
+      </div>
+      <form class="add" id="addForm" autocomplete="off">
+        <input type="text" id="addName" placeholder="Add a friend by username" maxlength="21" spellcheck="false" aria-label="Friend's username" />
+        <button class="btn" type="submit" id="addBtn" title="Send friend request" aria-label="Send friend request"><i class="fa-solid fa-user-plus" aria-hidden="true"></i></button>
+      </form>
+      <div class="list" id="list"></div>
+    </aside>
+
+    <section class="conv" aria-label="Conversation">
+      <div class="idle" id="idle"><div><i class="fa-regular fa-comments" aria-hidden="true"></i>Select a conversation,<br>or send someone a friend request.</div></div>
+      <div class="convbody" id="convBody" hidden>
+        <div class="head">
+          <button class="btn ghost sm" id="backBtn" type="button" aria-label="Back to conversations"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
+          <span id="peerAvatar" aria-hidden="true"></span>
+          <div class="who"><b id="peer"></b><small id="peerSub"></small></div>
+          <span class="cap" id="cap"></span>
+          <button class="btn ghost sm" id="removeBtn" type="button" title="Remove friend and delete this chat"><i class="fa-solid fa-user-minus" aria-hidden="true"></i> Remove</button>
+        </div>
+        <div class="thread" id="thread" role="log" aria-live="polite"></div>
+        <div class="typing-row" id="typingRow" role="status" aria-live="polite"></div>
+        <div class="composer-wrap">
+          <form class="composer" id="composer" autocomplete="off">
+            <textarea id="msg" rows="1" maxlength="500" placeholder="Message… (Enter to send)" aria-label="Message"></textarea>
+            <button class="btn" id="sendBtn" type="submit"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Send</button>
+          </form>
+          <div class="count"><span id="left">500</span> characters left · <span id="keepNote">only the latest 60 messages are kept</span></div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+<div class="user-menu" id="userMenu" hidden></div>
+
+<script src="../../js/endpoints.js"></script>
+<script src="../../js/utils.js"></script>
+<script src="../../js/ticket.js"></script>
+<script src="../../js/themify.js"></script>
+<script src="../../js/cursors.js"></script>
+<script src="../../js/msgcore.js"></script>
+<script src="../../js/chat.js"></script>
+</body>
+</html>

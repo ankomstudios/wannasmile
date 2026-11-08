@@ -1,0 +1,21 @@
+# Keep crawlers and AI agents out of the site's source folder.
+# (robots.txt is a request that well-behaved bots honour; it is not access control.)
+
+User-agent: *
+Disallow: /system/
+
+User-agent: GPTBot
+User-agent: ChatGPT-User
+User-agent: OAI-SearchBot
+User-agent: ClaudeBot
+User-agent: Claude-Web
+User-agent: anthropic-ai
+User-agent: Google-Extended
+User-agent: CCBot
+User-agent: PerplexityBot
+User-agent: Bytespider
+User-agent: Amazonbot
+User-agent: Applebot-Extended
+User-agent: Meta-ExternalAgent
+User-agent: cohere-ai
+Disallow: /system/

@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>WannaSmile | Profile Preview</title>
+<script src="../../js/endpoints.js"></script>
+<script src="../../js/utils.js"></script>
+<script src="../../js/themify.js"></script>
+<script>if(new URLSearchParams(location.search).get("embed")==="1")document.documentElement.classList.add("profile-embedded")</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.9.0/cdn/themes/dark.css" />
+<script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.9.0/cdn/shoelace-autoloader.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css" />
+<link rel="stylesheet" href="profile-testing.css">
+</head>
+<body>
+<div id="profileEditor">
+<aside id="editSidebar" aria-label="Profile editor">
+ <div id="editHome">
+  <div class="side-head"><h1>Main Profile</h1></div>
+  <p class="panel-intro" id="profilePanelIntro">Pick a section to edit it. Changes stay in this browser and don’t affect the live profile.</p>
+
+  <div class="edit-group">
+   <span class="edit-label">Nameplate</span>
+   <button type="button" class="edit-tile wide" data-open="nameplate" aria-label="Edit nameplate">
+    <span class="np-mini" id="tileNp"><span class="nameplate" id="tileNpPlate"><i class="np-layer"></i><i class="np-scrim"></i></span><span class="np-avatar-wrap"><span class="np-av" id="tileNpAvatar"></span><span class="np-frame" id="tileNpFrame" aria-hidden="true"></span></span><span class="np-name" id="tileNpName"></span></span>
+   </button>
+  </div>
+
+  <div class="edit-group">
+   <span class="edit-label">Avatar &amp; Decoration</span>
+   <div class="edit-pair">
+    <button type="button" class="edit-tile sq" data-open="avatar" aria-label="Edit avatar"><span class="tile-av" id="tileAvatar"></span><span class="tile-cap">Avatar</span></button>
+    <button type="button" class="edit-tile sq" data-open="frame" aria-label="Edit avatar frame"><span class="tile-frame" id="tileFrame"></span><span class="tile-plus" id="tilePlus">+</span><span class="tile-cap">Frame</span></button>
+   </div>
+  </div>
+
+  <div class="edit-group">
+   <span class="edit-label">Banner</span>
+   <button type="button" class="edit-tile bar" data-open="banner" aria-label="Edit banner and divider"><span class="tile-fill" id="tileBanner"></span><span class="tile-cap">Image, tint &amp; divider</span></button>
+  </div>
+
+  <div class="edit-group">
+   <span class="edit-label">Card Border &amp; Wrapper</span>
+   <div class="edit-pair">
+    <button type="button" class="edit-tile sq" data-open="border" aria-label="Edit card border"><span class="tile-ring"><span class="ring" id="tileRing"></span><span class="ring-overlay" id="tileOverlay" hidden></span></span><span class="tile-cap">Border</span></button>
+    <button type="button" class="edit-tile sq" data-open="wrapper" aria-label="Edit card wrapper"><span class="tile-fill" id="tileWrapper"></span><span class="tile-plus" id="tileWrapperPlus">+</span><span class="tile-cap">Wrapper</span></button>
+   </div>
+  </div>
+
+  <div class="edit-group">
+   <span class="edit-label">Profile Effect &amp; Status Bubble</span>
+   <div class="edit-pair">
+    <button type="button" class="edit-tile sq" data-open="effects" aria-label="Edit particles"><span class="tile-text" id="tileFx">No effect</span><span class="tile-cap">Effect</span></button>
+    <button type="button" class="edit-tile sq" data-open="bubble" aria-label="Edit status bubble"><span class="tile-bubble" id="tileBubble"></span><span class="tile-cap">Bubble</span></button>
+   </div>
+  </div>
+
+  <div class="edit-group">
+   <span class="edit-label">Display Name Style</span>
+   <button type="button" class="edit-tile wide" data-open="name" aria-label="Edit display name style"><span class="tile-name" id="tileName"></span></button>
+  </div>
+
+  <div class="edit-group">
+   <span class="edit-label">Achievements</span>
+   <button type="button" class="edit-tile wide" data-open="achievements" aria-label="Edit achievements"><span class="tile-badges" id="tileAch"></span></button>
+  </div>
+
+  <div class="edit-group">
+   <span class="edit-label">Activity</span>
+   <button type="button" class="edit-tile wide" data-open="activity" aria-label="Edit activity"><span class="tile-text" id="tileAct"></span></button>
+  </div>
+
+  <div class="edit-group"><button type="button" class="edit-link" data-open="share">Share or reset…</button></div>
+ </div>
+
+ <div id="editPane" hidden>
+  <div class="pane-head"><button type="button" class="mini pane-back" id="paneBack" aria-label="Back to profile sections">‹ Back</button><h1 id="paneTitle"></h1></div>
+
+  <section class="edit-pane" id="pane-nameplate" hidden>
+   <p class="panel-intro">A plate drawn behind your display name. Pick a built-in style, a library image, or use your own.</p>
+   <div class="picker"><div class="grid" id="pickNameplate"></div></div>
+   <label><span>Image URL</span><input type="text" id="npImg" placeholder="blank = use the style above"></label>
+   <div class="media-strip">
+    <button type="button" class="mini" id="importNpBtn">Import image</button>
+    <input type="file" id="npFile" accept="image/*" hidden>
+    <span class="tiny" id="npImportStatus" role="status" aria-live="polite"></span>
+   </div>
+   <label><span>Image fit</span><select id="npFit"><option value="cover">Cover</option><option value="stretch">Stretch</option><option value="tile">Tile</option></select></label>
+   <label><span>Opacity</span><input type="range" id="npOpacity" min="10" max="100"></label>
+   <label><span>Text shade</span><input type="range" id="npDim" min="0" max="80"></label>
+   <p class="section-note">Text shade darkens the plate so the name stays readable.</p>
+   <h2>Animation</h2>
+   <label><span>Effect</span><select id="npAnim"><option value="none">None</option><option value="sheen">Sheen sweep</option><option value="drift">Drift</option><option value="pulse">Pulse</option><option value="hue">Colour cycle</option></select></label>
+   <label><span>Duration</span><input type="range" id="npDur" min="1" max="20"></label>
+  </section>
+
+  <section class="edit-pane" id="pane-avatar" hidden>
+   <p class="panel-intro" id="catNote">Choose an image from a library, or paste a direct URL in the advanced field.</p>
+   <div class="picker"><input type="text" class="pfilter" data-for="avatar" placeholder="search avatars..."><div class="grid" id="pickAvatar"></div></div>
+   <label><span>Image URL</span><input type="text" id="pimg" placeholder="blank = your saved pfp"></label>
+   <button type="button" class="mini" id="removeProfileImage" aria-pressed="false">Remove profile image</button>
+   <label><span>Size</span><input type="range" id="pfpSize" min="60" max="190"></label>
+   <label><span>Corners</span><input type="range" id="pfpRadius" min="0" max="50"></label>
+   <label><span>Border</span><input type="range" id="pfpBorderSize" min="0" max="25"></label>
+   <label><span>Status</span><select id="statusMode"><option value="green">Green</option><option value="red">Red</option><option value="yellow">Yellow</option><option value="moon">Moon</option><option value="grey">Grey</option></select></label>
+   <label><span>Border colour</span><select id="pfpBorderMode"><option value="default">Default</option><option value="custom">Custom</option></select></label>
+   <label id="pfpBorderColorControl" hidden><span>Custom colour</span><input type="color" id="pfpBorderColor"></label>
+   <label><span>Pixelate</span><input type="range" id="pixelate" min="0" max="128" step="8"></label>
+   <div class="media-strip">
+    <button type="button" class="mini" data-pixel="0">Off</button><button type="button" class="mini" data-pixel="32">32</button><button type="button" class="mini" data-pixel="64">64</button><button type="button" class="mini" data-pixel="128">128</button>
+    <button type="button" class="mini" id="cropAvatarBtn">Crop avatar</button>
+   </div>
+  </section>
+
+  <section class="edit-pane" id="pane-frame" hidden>
+   <div class="picker"><input type="text" class="pfilter" data-for="frame" placeholder="search frames..."><div class="grid" id="pickFrame"></div></div>
+   <label><span>Image URL</span><input type="text" id="pframe" placeholder="blank = none"></label>
+   <div class="media-strip">
+    <button type="button" class="mini" id="importFrameBtn">Import frame image</button>
+    <input type="file" id="frameFile" accept="image/*" hidden>
+    <span class="tiny" id="frameImportStatus" role="status" aria-live="polite"></span>
+   </div>
+   <label><span>Scale</span><input type="range" id="pframeScale" min="80" max="200"></label>
+   <label><span>Move X</span><input type="range" id="pframeX" min="-80" max="80" step="1"></label>
+   <label><span>Move Y</span><input type="range" id="pframeY" min="-80" max="80" step="1"></label>
+   <div class="media-strip"><button type="button" class="mini" id="centerProfileFrame">Center frame</button></div>
+   <p class="section-note">Position adjustments also appear on your collapsed friends-list nameplate.</p>
+  </section>
+
+  <section class="edit-pane" id="pane-banner" hidden>
+   <h2>Banner image</h2>
+   <div class="picker"><input type="text" class="pfilter" data-for="banner" placeholder="search banners..."><div class="grid" id="pickBanner"></div></div>
+   <label><span>Image URL</span><input type="text" id="bimgMedia" placeholder="blank = default"></label>
+   <label><span>Tint</span><input type="color" id="bannerTint"></label>
+   <label><span>Banner height</span><input type="range" id="bh" min="90" max="420"></label>
+   <div class="media-strip"><button type="button" class="mini" id="cropBannerBtn">Crop banner</button></div>
+   <h2>Banner divider</h2>
+   <label><span>Style</span><select id="divStyle"><option value="line">Line</option><option value="blend">Image blend mark</option><option value="none">Hidden</option><option value="jagged">Jagged</option><option value="drip">Dripping paint</option><option value="xmaslights">Christmas lights</option><option value="wave">Wave</option></select></label>
+   <label id="divFillControl"><span>Fill</span><select id="divFill"><option value="color">Solid colour</option><option value="mask">Banner mask</option></select></label>
+   <label id="divColorControl"><span>Colour</span><input type="color" id="divColor"></label>
+   <label><span id="divSizeLabel">Thickness</span><input type="range" id="divSize" min="1" max="40"></label>
+   <p class="section-note">Choose a colour or continue the banner image through a divider mask into the wrapper.</p>
+  </section>
+
+  <section class="edit-pane" id="pane-border" hidden>
+   <p class="panel-intro">The border drawn around the whole profile card. Use colours, or an image, and optionally animate it.</p>
+   <label><span>Border type</span><select id="cbType"><option value="gradient">Gradient colours</option><option value="ring">Image ring</option><option value="overlay">Image overlay (stretch)</option><option value="slice">Image 9-slice</option></select></label>
+   <p class="section-note" id="cbTypeNote"></p>
+   <div id="cbGradientControls">
+    <label><span>Colour A</span><input type="color" id="bc1"></label>
+    <label><span>Colour B</span><input type="color" id="bc2"></label>
+    <label id="cbDirControl"><span>Direction</span><input type="range" id="ba" min="0" max="360"></label>
+   </div>
+   <div id="cbImageControls" hidden>
+    <div class="picker"><div class="grid" id="pickBorder"></div></div>
+    <label><span>Image URL</span><input type="text" id="cbImg" placeholder="png / gif / webp / svg"></label>
+    <div class="media-strip">
+     <button type="button" class="mini" id="importBorderBtn">Import image</button>
+     <input type="file" id="borderFile" accept="image/*" hidden>
+     <span class="tiny" id="borderImportStatus" role="status" aria-live="polite"></span>
+    </div>
+    <div id="cbSliceControls" hidden>
+     <label><span>Slice</span><input type="range" id="cbSlice" min="1" max="120"></label>
+     <label><span>Edge repeat</span><select id="cbRepeat"><option value="stretch">Stretch</option><option value="repeat">Repeat</option><option value="round">Round</option></select></label>
+    </div>
+   </div>
+   <label id="cbWidthControl"><span>Size</span><input type="range" id="bw" min="0" max="16"></label>
+   <label><span>Corners</span><input type="range" id="r" min="0" max="48"></label>
+   <h2>Animation</h2>
+   <label><span>Effect</span><select id="cbAnim"><option value="none">None</option><option value="spin">Spin</option><option value="comet">Comet chase</option><option value="pulse">Pulse glow</option><option value="rainbow">Colour cycle</option><option value="shimmer">Shimmer sweep</option><option value="breathe">Breathe</option></select></label>
+   <label><span>Duration</span><input type="range" id="cbDur" min="1" max="20"></label>
+   <p class="section-note" id="cbAnimNote"></p>
+  </section>
+
+  <section class="edit-pane" id="pane-wrapper" hidden>
+   <label><span>Background</span><select id="pwrapperMode"><option value="image">Image</option><option value="color">Solid colour</option></select></label>
+   <label id="wrapperColorControl" hidden><span>Colour</span><input type="color" id="pwrapperColor"></label>
+   <div id="wrapperImageControls">
+    <div class="picker"><input type="text" class="pfilter" data-for="wrapper" placeholder="search wrappers..."><div class="grid" id="pickWrapper"></div></div>
+    <label><span>Image URL</span><input type="text" id="pwrapper" placeholder="blank = none"></label>
+   </div>
+   <label><span>Opacity</span><input type="range" id="pwrapperOpacity" min="0" max="100"></label>
+  </section>
+
+  <section class="edit-pane" id="pane-effects" hidden>
+   <label><span>Effect</span><select id="fx_t"><option value="none">None</option><option value="snow">Snow</option><option value="rain">Rain</option><option value="embers">Embers</option><option value="stars">Stars</option></select></label>
+   <label><span>Amount</span><input type="range" id="fx_n" min="10" max="150"></label>
+  </section>
+
+  <section class="edit-pane" id="pane-bubble" hidden>
+   <p class="section-note">Edit the thought bubble, then drag it directly on the preview to reposition it.</p>
+   <label><span>Text</span><input type="text" id="qText" maxlength="80"></label>
+   <label><span>Size</span><input type="range" id="qSize" min="10" max="36"></label>
+   <label><span>Colour</span><input type="color" id="qColor"></label>
+   <button id="qReset">Reset position</button>
+  </section>
+
+  <section class="edit-pane" id="pane-name" hidden>
+   <label><span>Name</span><input type="text" id="nm" maxlength="24"></label>
+   <label><span>Font</span><select id="nf"><option value="ui-monospace,Menlo,Consolas,monospace">Monospace</option><option value="Georgia,serif">Serif</option><option value="'Comic Sans MS','Comic Neue',cursive">Comic</option><option value="Impact,Haettenschweiler,sans-serif">Impact</option><option value="'Brush Script MT',cursive">Script</option><option value="system-ui,sans-serif">Sans</option></select></label>
+   <label><span>Size</span><input type="range" id="ns" min="14" max="56"></label>
+   <label><span>Colour</span><input type="color" id="nc"></label>
+   <label><span>Outline</span><input type="range" id="no" min="0" max="8"></label>
+   <label><span>Bold / italic</span><span class="row" style="flex:1"><label style="margin:0"><input type="checkbox" id="nb"> B</label><label style="margin:0"><input type="checkbox" id="ni"> I</label></span></label>
+  </section>
+
+  <section class="edit-pane" id="pane-achievements" hidden>
+   <p class="section-note">Choose up to five earned badges to show on the card. Turn on preview to test unearned ones.</p>
+   <div id="achList"></div>
+   <label><span>Preview all</span><input type="checkbox" id="achDemo"></label>
+  </section>
+
+  <section class="edit-pane" id="pane-activity" hidden>
+   <p class="panel-intro">Activity is built from the last 6 links opened on this site. Each one is compared with the SQL library; a match supplies the icon, title, author and type.</p>
+   <label><span>Show on profile</span><input type="checkbox" id="actShow"></label>
+   <h2>Try it</h2>
+   <label><span>Link</span><input type="text" id="actUrl" placeholder="https://…"></label>
+   <div class="row"><button type="button" id="actRecord">Record open</button></div>
+   <label><span>From library</span><select id="actPick"><option value="">Library not loaded</option></select></label>
+   <div class="row"><button type="button" id="actRecordPick">Record selected</button><button type="button" id="actClear">Clear history</button></div>
+   <h2>SQL library</h2>
+   <p class="tiny" id="libInfo" role="status" aria-live="polite"></p>
+   <div class="row"><button type="button" class="mini" id="libReload">Reload library</button></div>
+   <h2>Hook for the main site</h2>
+   <p class="section-note">Call this at the top of <code>openAsset(link)</code> in main.js. Opens recorded in any tab show up here live.</p>
+   <pre class="code-note">window.WS_recordOpen?.(link);</pre>
+   <p class="tiny">Stored in localStorage as <code>ws_recent_opens</code>: up to 6 entries of {url, t}. Nothing else is saved; matching happens at display time.</p>
+  </section>
+
+  <section class="edit-pane" id="pane-share" hidden>
+   <p class="note">Others can't see profiles until the backend stores them. Until then: copy a share code and send it; they paste it here.</p>
+   <div class="row"><button id="copy">Copy share code</button><button id="load">Load code</button><button id="reset">Reset all</button></div>
+   <textarea id="code" rows="3" style="width:100%;margin-top:6px" placeholder="share code"></textarea>
+  </section>
+ </div>
+</aside>
+
+<main>
+ <div id="previewShell">
+ <div id="profileTopToolbar" role="toolbar" aria-label="Profile editor actions">
+  <button type="button" class="profile-toolbar-action" id="disregardProfileButton">Disregard</button>
+  <div id="avatarAlignModes" role="group" aria-label="Avatar position">
+  <button type="button" data-avatar-align="left" aria-pressed="false">Left</button>
+  <button type="button" data-avatar-align="center" aria-pressed="true">Center</button>
+  <button type="button" data-avatar-align="right" aria-pressed="false">Right</button>
+  </div>
+  <button type="button" class="profile-toolbar-action" id="saveProfileButton">Save Profile</button>
+ </div>
+ <div id="card">
+  <div id="wrapper"></div>
+  <div id="banner">
+   <div id="bannerTintLayer"></div><div id="divider"></div><div id="blendMark"></div><div id="bannerMaskExtension"></div>
+  </div>
+  <div id="profileMore">
+   <button type="button" id="profileMoreButton" aria-label="More profile options" aria-haspopup="menu" aria-expanded="false" aria-controls="profileMoreMenu">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>
+   </button>
+   <div id="profileMoreMenu" role="menu" aria-labelledby="profileMoreButton" hidden>
+    <button type="button" class="profile-menu-item" role="menuitem" data-profile-action="main">View Profile</button>
+    <button type="button" class="profile-menu-item" role="menuitem" data-profile-action="share">Share Profile</button>
+    <div class="profile-menu-separator" role="separator"></div>
+    <button type="button" class="profile-menu-item" role="menuitem" data-profile-action="ignore">Ignore</button>
+    <button type="button" class="profile-menu-item danger" role="menuitem" data-profile-action="block">Block</button>
+    <button type="button" class="profile-menu-item danger" role="menuitem" data-profile-action="report">Report User</button>
+    <div class="profile-menu-separator" role="separator"></div>
+    <button type="button" class="profile-menu-item" role="menuitem" data-profile-action="copy-link">Copy Link</button>
+    <button type="button" class="profile-menu-item" role="menuitem" data-profile-action="copy-id">Copy User ID</button>
+   </div>
+  </div>
+  <div id="profileActions">
+   <div id="avatar"><div id="avatarFrame"></div><span id="avatarStatus" role="img" aria-label="Online"></span></div>
+   <button type="button" class="profile-action message" id="messageUser" aria-label="Message user">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3C6.93 3 3 6.42 3 10.63c0 2.25 1.18 4.27 3.07 5.61-.14 1.11-.58 2.15-1.28 3.02 1.78-.13 3.25-.72 4.31-1.66.91.26 1.9.4 2.9.4 5.07 0 9-3.42 9-7.37S17.07 3 12 3Z"></path></svg>
+   </button>
+   <button type="button" class="profile-action add-friend" id="addFriend">
+    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm0 1c-2.67 0-5 1.34-5 3v2h8.2a4.5 4.5 0 0 1-.7-2.4c0-.96.3-1.85.8-2.58A10 10 0 0 0 6 9Zm7-1v2h-2v2h2v2h2v-2h2v-2h-2V8z"></path></svg>
+    Add Friend
+   </button>
+  </div>
+  <div id="body">
+   <div class="profile-identity" data-np="off">
+    <div class="nameplate" id="nameplate" aria-hidden="true"><i class="np-layer"></i><i class="np-scrim"></i></div>
+    <div class="profile-name-row">
+     <h2 id="name"></h2>
+    </div>
+    <div class="profile-awards"><span id="badges"></span></div>
+   </div>
+   <section class="profile-panel" id="tabBio" aria-label="About">
+    <div class="profile-section-title">Bio</div>
+    <div id="profileBio" contenteditable="plaintext-only" role="textbox" aria-label="Bio" aria-multiline="true" spellcheck="true"></div>
+    <div class="profile-section-title">Roles</div>
+    <div class="profile-role-list" id="profileRoleList"></div>
+    <button type="button" class="profile-role-add" id="addRoleButton" aria-label="Add role" aria-expanded="false" aria-controls="roleComposer">+</button>
+    <form class="profile-role-composer" id="roleComposer" hidden>
+     <input type="text" id="newRoleName" maxlength="24" placeholder="Role name" aria-label="New role name" required>
+     <button type="submit">Add</button>
+     <button type="button" id="cancelRole">Cancel</button>
+    </form>
+    <div class="profile-section-title">Member since</div>
+    <div class="profile-since" id="memberSince"></div>
+   </section>
+  </div>
+  <div class="ring" id="cardRing" aria-hidden="true"></div>
+  <div class="ring-overlay" id="cardOverlay" aria-hidden="true" hidden></div>
+  <canvas id="fx"></canvas>
+  <div id="quote"></div>
+ </div>
+ <div id="profileBottomToolbar" role="group" aria-label="Profile save and preview actions">
+  <button type="button" id="previewProfileButton">Preview Profile</button>
+  <button type="button" id="saveDraftButton">Save Draft</button>
+  <button type="button" id="saveMainProfileButton">Save to Main Profile</button>
+ </div>
+ </div>
+</main>
+
+<aside class="right" id="activityRail" aria-label="Profile activity">
+ <div class="rail-tabs" id="railTabs" role="tablist" aria-label="Profile sections">
+  <button type="button" class="rail-tab" id="railBoardBtn" role="tab" aria-selected="false" aria-controls="railBoard" tabindex="-1">Board</button>
+  <button type="button" class="rail-tab" id="railActivityBtn" role="tab" aria-selected="true" aria-controls="railActivity" tabindex="0">Activity</button>
+  <button type="button" class="rail-tab" id="railFriendsBtn" role="tab" aria-selected="false" aria-controls="railFriends" tabindex="-1">Friends</button>
+  <button type="button" class="rail-tab" id="railWishBtn" role="tab" aria-selected="false" aria-controls="railWish" tabindex="-1">Wishlist</button>
+ </div>
+ <section id="railActivity" role="tabpanel" aria-labelledby="railActivityBtn">
+  <p class="rail-eyebrow">Recent activity</p>
+  <p class="rail-sub">You'll see the last 6 links opened on this site. <span id="libStatus"></span></p>
+  <div class="act-list" id="activityList"></div>
+ </section>
+ <section id="railBoard" role="tabpanel" aria-labelledby="railBoardBtn" hidden><p class="profile-empty">Nothing pinned to the board yet. Preview only.</p></section>
+ <section id="railFriends" class="profile-friends" role="tabpanel" aria-labelledby="railFriendsBtn" hidden>
+  <div class="friends-preview-head"><strong>Collapsed friends-list view</strong><button type="button" id="shuffleFriendsPreview" aria-label="Shuffle sample nameplate backgrounds and frames">Shuffle</button></div>
+  <p class="rail-sub">Random profile photos, name styles, backgrounds, and avatar frames. Preview only.</p>
+  <div class="profile-friend" data-friend-preview>
+   <span class="friend-plate" aria-hidden="true"></span><span class="friend-plate-scrim" aria-hidden="true"></span>
+   <span class="profile-friend-avatar-wrap"><span class="profile-friend-avatar" aria-hidden="true"><img alt=""></span><span class="profile-friend-frame" aria-hidden="true"></span></span>
+   <span class="profile-friend-meta"><span class="profile-friend-name">Aster</span></span>
+  </div>
+  <div class="profile-friend" data-friend-preview>
+   <span class="friend-plate" aria-hidden="true"></span><span class="friend-plate-scrim" aria-hidden="true"></span>
+   <span class="profile-friend-avatar-wrap"><span class="profile-friend-avatar" aria-hidden="true"><img alt=""></span><span class="profile-friend-frame" aria-hidden="true"></span></span>
+   <span class="profile-friend-meta"><span class="profile-friend-name">Mika</span></span>
+  </div>
+  <div class="profile-friend" data-friend-preview>
+   <span class="friend-plate" aria-hidden="true"></span><span class="friend-plate-scrim" aria-hidden="true"></span>
+   <span class="profile-friend-avatar-wrap"><span class="profile-friend-avatar" aria-hidden="true"><img alt=""></span><span class="profile-friend-frame" aria-hidden="true"></span></span>
+   <span class="profile-friend-meta"><span class="profile-friend-name">Rowan</span></span>
+  </div>
+ </section>
+ <section id="railWish" role="tabpanel" aria-labelledby="railWishBtn" hidden><p class="profile-empty">No wishlist items yet. Preview only.</p></section>
+</aside>
+</div>
+
+<div id="cropModal" aria-hidden="true">
+  <div id="cropBox">
+    <div id="cropCanvasWrap"><img id="cropImage" alt="crop area"></div>
+    <div class="crop-actions">
+      <button id="cropCancel" type="button">Cancel</button>
+      <button id="cropApply" type="button">Apply crop</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
+<script src="../../js/profile-testing.js"></script>
+</body>
+</html>

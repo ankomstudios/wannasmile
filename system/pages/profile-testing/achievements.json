@@ -1,0 +1,14 @@
+{
+  "wannatutorialize": {
+    "metadata-title": "WannaTutorialize",
+    "image-url": "https://placehold.co/64x64/ff4444/ffffff.png?text=WT"
+  },
+  "criticalReviewer": {
+    "metadata-title": "Critical Reviewer",
+    "image-url": "https://placehold.co/64x64/ff8a00/111111.png?text=CR"
+  },
+  "adventurist": {
+    "metadata-title": "Adventurist",
+    "image-url": "https://placehold.co/64x64/8a80ff/111111.png?text=A"
+  }
+}

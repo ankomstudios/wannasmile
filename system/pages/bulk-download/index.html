@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script src="../../js/desktop.js"></script>
+<link id="favicon" rel="icon" type="image/png" href="https://raw.githubusercontent.com/securlydetected/assets/refs/heads/main/favicons/ico.png" />
+<title>WannaSmile | Asset Downloads</title>
+
+<style>
+/* Same family as the DMCA / Store / Settings pages: tilted panels with offset
+   accent shadows, polka dots, pill buttons, coloured by the active theme
+   (themify.js). */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html {
+  min-height: 100%;
+  background: var(--main-bg, #111) center / cover fixed no-repeat;
+  background-color: #111;
+  overflow-x: hidden;
+}
+html.ws-bg-fallback { background-image: url("https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/main/themes/redux/mainBg.png"); }
+body {
+  min-height: 100vh;
+  overflow-x: clip;
+  padding: clamp(16px, 4vh, 48px) 16px 64px;
+  font-family: monospace;
+  color: var(--url-color, #fff);
+  background:
+    radial-gradient(circle, rgba(255,255,255,0.10) 1.5px, transparent 2px) 0 0 / 22px 22px,
+    rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+}
+a { color: inherit; }
+.wrap { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: clamp(18px, 3vh, 30px); }
+
+/* ── Top ── */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.back {
+  color: var(--url-color, #fff);
+  text-decoration: none;
+  font-weight: bold;
+  padding: 7px 14px;
+  border: 2px solid rgba(255,255,255,0.35);
+  border-radius: 999px;
+  background: rgba(0,0,0,0.4);
+  transition: border-color 0.15s, color 0.15s, transform 0.15s;
+}
+.back:hover { border-color: var(--accent-color, #f44); color: var(--accent-color, #f44); transform: translateX(-3px); }
+.title { text-align: right; }
+h1 {
+  display: inline-block;
+  font-size: clamp(26px, 4.4vh, 44px);
+  transform: rotate(-2deg);
+  text-shadow: 3px 3px 0 var(--accent-color, #f44);
+}
+.tagline { margin-top: 6px; opacity: 0.8; font-size: 0.85rem; }
+
+/* ── Panels ── */
+.panel {
+  padding: clamp(16px, 2.6vh, 28px);
+  border-radius: 20px 26px 22px 28px;
+  border: 3px solid var(--accent-color, #f44);
+  background: var(--aside-bg, rgba(0,0,0,0.92));
+  box-shadow: -8px 8px 0 var(--accent-color, #f44);
+}
+.panel:nth-of-type(even) { transform: rotate(0.35deg); box-shadow: 8px 8px 0 var(--accent-color, #f44); }
+.panel h2 {
+  display: inline-block;
+  margin-bottom: 14px;
+  font-size: clamp(18px, 2.6vh, 26px);
+  transform: rotate(-1.5deg);
+  text-shadow: 2px 2px 0 var(--accent-color, #f44);
+}
+.panel h2 .emoji { display: inline-block; margin-right: 6px; transform: rotate(-8deg); }
+.panel p { font-size: 0.85rem; line-height: 1.7; }
+.panel p + p { margin-top: 10px; }
+.panel code { padding: 1px 6px; border-radius: 6px; background: rgba(255,255,255,0.12); font-size: 0.95em; }
+
+/* ── Form ── */
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin-top: 4px; }
+.field { display: flex; flex-direction: column; gap: 6px; font-size: 0.78rem; }
+.field > span { opacity: 0.85; font-weight: bold; }
+.field input[type="text"], .field input[type="search"], .field select {
+  width: 100%;
+  padding: 9px 12px;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--url-color, #fff);
+  background: rgba(255,255,255,0.07);
+  border: 2px solid rgba(255,255,255,0.25);
+  border-radius: 12px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.field select option { color: #000; }
+.field input:focus, .field select:focus { border-color: var(--accent-color, #f44); }
+.field .hint { font-size: 0.72rem; opacity: 0.65; }
+.check {
+  display: flex; gap: 10px; align-items: center;
+  margin-top: 14px; font-size: 0.8rem; cursor: pointer;
+}
+.check input { width: 18px; height: 18px; accent-color: var(--accent-color, #f44); cursor: pointer; }
+
+.btn {
+  font: inherit;
+  font-weight: bold;
+  font-size: 0.9rem;
+  padding: 10px 20px;
+  color: #fff;
+  background: var(--accent-color, #f44);
+  border: 2px solid rgba(0,0,0,0.4);
+  border-radius: 999px;
+  box-shadow: 3px 3px 0 rgba(0,0,0,0.5);
+  cursor: pointer;
+  transition: transform 0.15s, filter 0.15s;
+}
+.btn:hover:not(:disabled) { transform: translateY(-2px) rotate(-1deg); filter: brightness(1.1); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn.ghost { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.35); box-shadow: none; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 18px; }
+
+/* ── Stats / preview ── */
+.stats { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.stat {
+  padding: 8px 14px; border-radius: 12px;
+  border: 2px solid rgba(255,255,255,0.22); background: rgba(255,255,255,0.05);
+  font-size: 0.78rem;
+}
+.stat b { display: block; font-size: 1.25rem; line-height: 1.2; }
+.tree {
+  margin-top: 14px; padding: 12px 14px; max-height: 210px; overflow: auto;
+  border: 2px dashed rgba(255,255,255,0.25); border-radius: 12px;
+  font-size: 0.76rem; line-height: 1.65; white-space: pre; opacity: 0.92;
+}
+
+/* ── Progress ── */
+.bar { height: 16px; border-radius: 999px; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.06); overflow: hidden; }
+.bar > i { display: block; height: 100%; width: 0; background: var(--accent-color, #f44); transition: width 0.15s linear; }
+.status { margin-top: 10px; font-size: 0.8rem; min-height: 1.4em; }
+.log { margin-top: 12px; max-height: 220px; overflow: auto; font-size: 0.74rem; line-height: 1.6; }
+.log div { padding: 2px 0; border-bottom: 1px dashed rgba(255,255,255,0.12); word-break: break-all; }
+.log .bad { color: #ff8a8a; }
+.parts { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.parts div { font-size: 0.78rem; padding: 6px 12px; border: 2px solid rgba(255,255,255,0.3); border-radius: 999px; align-self: flex-start; }
+.notice { padding: 10px 14px; border: 2px dashed rgba(255,255,255,0.3); border-radius: 12px; font-size: 0.8rem; line-height: 1.6; }
+.notice.err { border-color: #ff6b6b; color: #ffb0b0; }
+[hidden] { display: none !important; }
+
+@media (max-width: 560px) { .title { text-align: left; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <a class="back" href="../../../">← Back to WannaSmile</a>
+    <div class="title">
+      <h1>Bulk icon download</h1>
+      <p class="tagline">Every library icon, zipped as <code>zip-name/project-name/icon.png</code></p>
+    </div>
+  </div>
+
+  <section class="panel" id="setupPanel">
+    <h2><span class="emoji" aria-hidden="true">📦</span>Choose what to grab</h2>
+    <div class="stats" aria-live="polite">
+      <div class="stat"><b id="statLib">…</b>library rows</div>
+      <div class="stat"><b id="statIcons">…</b>with an icon</div>
+      <div class="stat"><b id="statPick">…</b>will download</div>
+    </div>
+    <div id="loadErr" class="notice err" hidden></div>
+
+    <div class="fields">
+      <label class="field"><span>Zip name</span>
+        <input type="text" id="zipName" value="wannasmile-icons" maxlength="80" autocomplete="off" spellcheck="false" />
+        <span class="hint">Also the top folder inside the zip.</span>
+      </label>
+      <label class="field"><span>Search</span>
+        <input type="search" id="q" placeholder="title, author, project…" autocomplete="off" />
+      </label>
+      <label class="field"><span>Category</span>
+        <select id="cat"><option value="">All categories</option></select>
+      </label>
+      <label class="field"><span>Parallel downloads</span>
+        <select id="conc">
+          <option value="3">3 (gentle)</option>
+          <option value="6" selected>6</option>
+          <option value="10">10</option>
+          <option value="16">16 (fast)</option>
+        </select>
+      </label>
+      <label class="field"><span>Assets per zip</span>
+        <select id="split">
+          <option value="100">100 per zip</option>
+          <option value="200" selected>200 per zip (recommended)</option>
+          <option value="400">400 per zip</option>
+          <option value="0">Everything in one zip (can crash)</option>
+        </select>
+        <span class="hint">Zips are built one after another, each freed before the next starts.</span>
+      </label>
+    </div>
+
+    <label class="check"><input type="checkbox" id="dedupe" checked /> Skip rows that point at an icon already included (versions of one project)</label>
+
+    <div class="tree" id="tree" aria-label="Preview of the zip layout">Loading the library…</div>
+
+    <div class="actions">
+      <button class="btn" id="go" disabled>Download zip</button>
+      <button class="btn ghost" id="refresh" type="button">Reload library</button>
+    </div>
+  </section>
+
+  <section class="panel" id="runPanel" hidden>
+    <h2><span class="emoji" aria-hidden="true">⏳</span>Working</h2>
+    <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="barFill"></i></div>
+    <div class="status" id="status"></div>
+    <div class="actions">
+      <button class="btn ghost" id="cancel" type="button">Cancel</button>
+      <button class="btn" id="retry" type="button" hidden>Retry failed</button>
+      <button class="btn ghost" id="copyFails" type="button" hidden>Copy failed list</button>
+    </div>
+    <div class="parts" id="parts"></div>
+    <div class="log" id="log"></div>
+  </section>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="../../js/endpoints.js"></script>
+<script src="../../js/utils.js"></script>
+<script src="../../js/themify.js"></script>
+<script src="../../js/cursors.js"></script>
+<script>
+"use strict";
+// ── Bulk icon download ─────────────────────────────────────────────────
+// Reads the same public library endpoint the homepage uses, downloads each row's
+// `image`, and zips them as   <zip-name>/<project-name>/<file>   — typically
+// wannasmile-icons/friday-night-funkin/icon.png. Nothing here touches the
+// engine: it only reads window.WS_ENDPOINTS.library.
+(() => {
+  const LIB_URL = window.WS_ENDPOINTS?.library;
+  const LIB_TTL_MS = 0;
+  const LIB_DB = "ws_library";
+  const IMG_EXT = /\.(?:png|jpe?g|webp|gif|avif|svg|ico|bmp)$/i;
+  const IMG_URL = /\/([^\/?#]+)\/([^\/?#]+\.(?:png|jpe?g|webp|gif|avif|svg|ico|bmp))(?:[?#].*)?$/i;
+  // Same placeholder main.js treats as "no icon".
+  const UNAVAILABLE = /^https?:\/\/raw\.githubusercontent\.com\/mcmattyobriore\/crazycars\/gh-pages\/crazy-cars\.png(?:[?#]|$)/i;
+  const TIMEOUT_MS = 30000;
+  const RETRIES = 2;
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const toast = (m) => window.showToast?.(m, 2600);
+  const safeDecode = (s) => { try { return decodeURIComponent(s); } catch (_) { return s; } };
+
+  let rows = [];          // all library rows (raw)
+  let entries = [];       // rows with a usable image: { title, author, category, url, project, file }
+  let picked = [];        // after filters + de-dupe + unique paths
+  let running = false;
+  let cancelled = false;
+  let lastFails = [];
+  let activeAbort = null;
+
+  // ── Library (same cache shape as main.js loadLibrarySnapshot) ─────────
+  function libDb() {
+    return new Promise((resolve, reject) => {
+      if (!window.indexedDB) return reject(new Error("no indexedDB"));
+      const req = indexedDB.open(LIB_DB, 1);
+      req.onupgradeneeded = () => req.result.createObjectStore("snap");
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function libRead() {
+    try {
+      const db = await libDb();
+      return await new Promise((resolve) => {
+        const get = db.transaction("snap").objectStore("snap").get(LIB_URL);
+        get.onsuccess = () => { db.close(); resolve(get.result || null); };
+        get.onerror = () => { db.close(); resolve(null); };
+      });
+    } catch (_) { return null; }
+  }
+  async function libWrite(value) {
+    try {
+      const db = await libDb();
+      await new Promise((resolve) => {
+        const tx = db.transaction("snap", "readwrite");
+        tx.objectStore("snap").put(value, LIB_URL);
+        tx.oncomplete = tx.onerror = tx.onabort = () => { db.close(); resolve(); };
+      });
+    } catch (_) {}
+  }
+  async function loadLibrary(force) {
+    if (!LIB_URL) throw new Error("The public library endpoint is not configured.");
+    const saved = await libRead();
+    const fresh = saved && Array.isArray(saved.items) && Date.now() - saved.savedAt < LIB_TTL_MS;
+    if (fresh && !force) return saved.items;
+    try {
+      const res = await fetch(LIB_URL, { cache: force ? "reload" : "no-cache" });
+      if (!res.ok) throw new Error(`HTTP ${res.status} loading the library file`);
+      const body = await res.json();
+      if (!Array.isArray(body?.items)) throw new Error("Library file has no items array");
+      libWrite({ savedAt: Date.now(), updated: body.updated || "", items: body.items });
+      return body.items;
+    } catch (err) {
+      if (saved && Array.isArray(saved.items)) {
+        console.warn("[bulk-download] using the saved library copy:", err.message);
+        toast("Couldn't reach the library; using the saved copy.");
+        return saved.items;
+      }
+      throw err;
+    }
+  }
+
+  // ── Names ────────────────────────────────────────────────────────────
+  // Folder-safe: no path separators or characters Windows refuses, no
+  // trailing dots/spaces, not empty.
+  function cleanName(s, fallback) {
+    let v = String(s ?? "").normalize("NFC")
+      .replace(/[\\\/:*?"<>|\u0000-\u001f]/g, "_")
+      .replace(/\s+/g, " ")
+      .replace(/^[\s.]+|[\s.]+$/g, "")
+      .slice(0, 100)
+      .replace(/[\s.]+$/g, "");
+    if (/^(?:con|prn|aux|nul|com\d|lpt\d)$/i.test(v)) v += "_";
+    return v || fallback;
+  }
+  const slug = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+  // Project name, in the order the engine itself uses (_iconNames in main.js):
+  // the image URL's folder (…/<name>/icon.png), then the link's folder, then
+  // the title.
+  function projectOf(item, imageUrl) {
+    const fromImage = (imageUrl.match(IMG_URL) || [])[1] || "";
+    const link = String(item.link || "");
+    const fromLink = (link.match(/\/([^\/?#]+)\/(?:index\.html?)?(?:[?#].*)?$/i) || link.match(/\/([^\/?#]+?)(?:\.html?(?:\.txt)?)?(?:[?#].*)?$/i) || [])[1] || "";
+    const name = safeDecode(fromImage) || safeDecode(fromLink) || slug(item.title);
+    return cleanName(name, "untitled");
+  }
+  function fileOf(imageUrl) {
+    const m = imageUrl.match(IMG_URL);
+    if (m) return cleanName(safeDecode(m[2]), "icon.png");
+    const last = safeDecode((imageUrl.split(/[?#]/)[0].split("/").pop() || ""));
+    return cleanName(last, "icon");
+  }
+
+  function buildEntries(items) {
+    const out = [];
+    for (const item of items) {
+      const raw = String(item?.image ?? "").trim();
+      if (!raw || UNAVAILABLE.test(raw)) continue;
+      let url;
+      try { url = new URL(raw, location.href).href; } catch (_) { continue; }
+      if (!/^https?:/i.test(url)) continue;
+      out.push({
+        title: String(item.title ?? ""),
+        author: String(item.author ?? ""),
+        category: String(item.category ?? ""),
+        link: String(item.link ?? ""),
+        url,
+        project: projectOf(item, url),
+        file: fileOf(url),
+      });
+    }
+    return out;
+  }
+
+  // Filters → unique zip paths. Same image URL twice = one file (when "skip"
+  // is on); two *different* images that map to the same project folder get a
+  // numeric suffix so neither overwrites the other.
+  function computePick() {
+    const q = $("q").value.trim().toLowerCase();
+    const cat = $("cat").value;
+    const dedupe = $("dedupe").checked;
+    const seenUrl = new Set();
+    const folderOwner = new Map();   // lower(project) → url that owns it
+    const folderCount = new Map();   // lower(project) → how many variants so far
+    const usedPaths = new Set();
+    const out = [];
+    for (const e of entries) {
+      if (cat && e.category !== cat) continue;
+      if (q && !(`${e.title} ${e.author} ${e.project}`.toLowerCase().includes(q))) continue;
+      if (dedupe) {
+        if (seenUrl.has(e.url)) continue;
+        seenUrl.add(e.url);
+      }
+      let project = e.project;
+      const key = project.toLowerCase();
+      if (folderOwner.has(key) && folderOwner.get(key) !== e.url) {
+        const n = (folderCount.get(key) || 1) + 1;
+        folderCount.set(key, n);
+        project = `${e.project}-${n}`;
+      } else if (!folderOwner.has(key)) {
+        folderOwner.set(key, e.url);
+        folderCount.set(key, 1);
+      }
+      let file = e.file;
+      let path = `${project}/${file}`;
+      if (usedPaths.has(path.toLowerCase())) {
+        const dot = file.lastIndexOf(".");
+        const base = dot > 0 ? file.slice(0, dot) : file, ext = dot > 0 ? file.slice(dot) : "";
+        let n = 2;
+        while (usedPaths.has(`${project}/${base}-${n}${ext}`.toLowerCase())) n++;
+        file = `${base}-${n}${ext}`;
+        path = `${project}/${file}`;
+      }
+      usedPaths.add(path.toLowerCase());
+      out.push({ ...e, project, file, path });
+    }
+    return out;
+  }
+
+  function zipRoot() { return cleanName($("zipName").value, "wannasmile-icons"); }
+
+  function refreshUi() {
+    picked = computePick();
+    $("statPick").textContent = picked.length.toLocaleString();
+    const root = zipRoot();
+    const lines = picked.slice(0, 14).map((e) => `${root}/${e.path}`);
+    $("tree").textContent = picked.length
+      ? lines.join("\n") + (picked.length > 14 ? `\n… and ${(picked.length - 14).toLocaleString()} more` : "")
+      : "Nothing matches these filters.";
+    $("go").disabled = running || !picked.length;
+  }
+
+  // ── Downloading ──────────────────────────────────────────────────────
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  async function fetchImage(url, outer) {
+    let lastErr;
+    for (let attempt = 0; attempt <= RETRIES; attempt++) {
+      if (cancelled) throw new Error("cancelled");
+      const ctl = new AbortController();
+      const onOuter = () => ctl.abort();
+      outer.addEventListener("abort", onOuter);
+      const timer = setTimeout(() => ctl.abort(), TIMEOUT_MS);
+      try {
+        // First try may reuse the browser's cache; retries bypass it. An icon the
+        // browser cached from a plain <img> load has no CORS headers saved with
+        // it, and fetch() would reuse that copy and fail.
+        const res = await fetch(url, { signal: ctl.signal, mode: "cors", credentials: "omit", cache: attempt === 0 ? "default" : "reload" });
+        if (!res.ok) {
+          const err = new Error(`HTTP ${res.status}`);
+          err.noRetry = res.status === 404 || res.status === 403 || res.status === 410;
+          throw err;
+        }
+        const blob = await res.blob();
+        if (!blob.size) throw new Error("empty file");
+        if (/^text\//i.test(blob.type)) throw new Error(`not an image (${blob.type})`);
+        return blob;
+      } catch (err) {
+        lastErr = err;
+        if (cancelled) throw new Error("cancelled");
+        if (err.noRetry) break;
+        if (attempt < RETRIES) await sleep(500 * 2 ** attempt);
+      } finally {
+        clearTimeout(timer);
+        outer.removeEventListener("abort", onOuter);
+      }
+    }
+    // A CORS refusal surfaces as a bare "Failed to fetch" TypeError.
+    if (lastErr && lastErr.name === "TypeError") lastErr.message = "blocked or unreachable (CORS / network)";
+    else if (lastErr && lastErr.name === "AbortError") lastErr.message = "timed out";
+    throw lastErr;
+  }
+
+  function extFromType(type) {
+    return ({ "image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp", "image/gif": ".gif", "image/avif": ".avif", "image/svg+xml": ".svg", "image/x-icon": ".ico", "image/vnd.microsoft.icon": ".ico", "image/bmp": ".bmp" })[type] || "";
+  }
+
+  function setProgress(done, total, text) {
+    const pct = total ? Math.round((done / total) * 100) : 0;
+    $("barFill").style.width = pct + "%";
+    document.querySelector(".bar").setAttribute("aria-valuenow", String(pct));
+    if (text !== undefined) $("status").textContent = text;
+  }
+  function logLine(text, bad) {
+    const d = document.createElement("div");
+    if (bad) d.className = "bad";
+    d.textContent = text;
+    const log = $("log");
+    log.appendChild(d);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function saveBlob(blob, name) {
+    const href = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = href; a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    return href;   // kept alive for the "download again" link
+  }
+
+  async function run(list, label) {
+    if (running || !list.length) return;
+    if (typeof JSZip === "undefined") {
+      toast("JSZip didn't load — check your connection and reload the page.");
+      return;
+    }
+    running = true; cancelled = false; lastFails = [];
+    const root = zipRoot();
+    const splitSize = parseInt($("split").value, 10) || 0;
+    const conc = Math.max(1, parseInt($("conc").value, 10) || 6);
+    const chunks = [];
+    if (splitSize > 0) for (let i = 0; i < list.length; i += splitSize) chunks.push(list.slice(i, i + splitSize));
+    else chunks.push(list);
+
+    $("runPanel").hidden = false;
+    $("retry").hidden = true; $("copyFails").hidden = true;
+    $("cancel").disabled = false;
+    $("parts").innerHTML = ""; $("log").innerHTML = "";
+    $("go").disabled = true; $("refresh").disabled = true;
+    $("runPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+    window.addEventListener("beforeunload", warnLeave);
+
+    const total = list.length;
+    let done = 0, ok = 0;
+    const abortAll = new AbortController();
+    activeAbort = abortAll;
+
+    try {
+      for (let c = 0; c < chunks.length; c++) {
+        const chunk = chunks[c];
+        const zip = new JSZip();
+        const partTag = chunks.length > 1 ? ` (zip ${c + 1}/${chunks.length})` : "";
+        let next = 0, added = 0;
+
+        const worker = async () => {
+          while (!cancelled) {
+            const i = next++;
+            if (i >= chunk.length) return;
+            const e = chunk[i];
+            try {
+              const blob = await fetchImage(e.url, abortAll.signal);
+              let file = e.file;
+              if (!IMG_EXT.test(file)) file += extFromType(blob.type);
+              zip.file(`${root}/${e.project}/${file}`, blob, { binary: true });
+              added++; ok++;
+            } catch (err) {
+              if (!cancelled) {
+                lastFails.push(e);
+                logLine(`✗ ${e.path} — ${err.message} — ${e.url}`, true);
+              }
+            }
+            done++;
+            setProgress(done, total, `Downloading ${done.toLocaleString()} / ${total.toLocaleString()}${partTag} · ${ok.toLocaleString()} saved · ${lastFails.length.toLocaleString()} failed`);
+          }
+        };
+        await Promise.all(Array.from({ length: Math.min(conc, chunk.length) }, worker));
+        if (cancelled) break;
+        if (!added) { logLine(`Zip ${c + 1}: nothing downloaded, skipped.`, true); continue; }
+
+        $("status").textContent = `Zipping${partTag}…`;
+        const blob = await zip.generateAsync(
+          { type: "blob", compression: "STORE", streamFiles: true },
+          (m) => { $("status").textContent = `Zipping${partTag}… ${Math.round(m.percent)}%`; }
+        );
+        // prefix + counter starting at 1: wannasmile-icons1.zip, wannasmile-icons2.zip, …
+        const fname = `${root}${label}${c + 1}.zip`;
+        const href = saveBlob(blob, fname);
+        // Domino: this zip is saved and released before the next one starts.
+        // The blob URL is revoked after the browser has had time to start the
+        // save, so no finished zip stays in memory (keeping them all was what
+        // crashed the single-zip run).
+        setTimeout(() => URL.revokeObjectURL(href), 60000);
+        const line = document.createElement("div");
+        line.textContent = `✓ ${fname} (${(blob.size / 1048576).toFixed(1)} MB, ${added.toLocaleString()} icons)`;
+        $("parts").appendChild(line);
+        zip.files = {};                     // drop the file entries (image blobs)
+        await sleep(700);                   // let the browser start the save before the next zip
+      }
+    } catch (err) {
+      console.error(err);
+      logLine(`Stopped: ${err.message}`, true);
+      toast("Something went wrong — see the log.");
+    } finally {
+      window.removeEventListener("beforeunload", warnLeave);
+      running = false; activeAbort = null;
+      $("go").disabled = !picked.length; $("refresh").disabled = false;
+      $("cancel").disabled = true;
+    }
+
+    if (cancelled) {
+      setProgress(done, total, `Cancelled after ${done.toLocaleString()} of ${total.toLocaleString()}. Nothing was zipped for the unfinished part.`);
+    } else {
+      setProgress(total, total, `Done: ${ok.toLocaleString()} of ${total.toLocaleString()} saved` + (lastFails.length ? `, ${lastFails.length.toLocaleString()} failed (listed below).` : "."));
+      toast(lastFails.length ? "Finished with some failures." : "All icons downloaded!");
+    }
+    if (lastFails.length) { $("retry").hidden = false; $("copyFails").hidden = false; }
+  }
+  const warnLeave = (e) => { e.preventDefault(); e.returnValue = ""; };
+
+  // ── Wiring ───────────────────────────────────────────────────────────
+  function fillCategories() {
+    const cats = [...new Set(entries.map((e) => e.category).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    $("cat").innerHTML = `<option value="">All categories</option>` + cats.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join("");
+  }
+
+  async function init(force) {
+    $("go").disabled = true;
+    $("loadErr").hidden = true;
+    $("tree").textContent = "Loading the library…";
+    ["statLib", "statIcons", "statPick"].forEach((id) => { $(id).textContent = "…"; });
+    try {
+      rows = await loadLibrary(force);
+      entries = buildEntries(rows);
+      $("statLib").textContent = rows.length.toLocaleString();
+      $("statIcons").textContent = entries.length.toLocaleString();
+      fillCategories();
+      refreshUi();
+    } catch (err) {
+      console.error(err);
+      $("loadErr").hidden = false;
+      $("loadErr").textContent = `Couldn't load the library: ${err.message}`;
+      $("tree").textContent = "";
+    }
+  }
+
+  $("go").addEventListener("click", () => run(picked, ""));
+  $("refresh").addEventListener("click", () => init(true));
+  $("cancel").addEventListener("click", () => { cancelled = true; activeAbort?.abort(); $("cancel").disabled = true; });
+  $("retry").addEventListener("click", () => run(lastFails.slice(), "-retry"));
+  $("copyFails").addEventListener("click", async () => {
+    const text = lastFails.map((e) => `${e.path}\t${e.url}`).join("\n");
+    try { await navigator.clipboard.writeText(text); toast("Failed list copied."); }
+    catch (_) { toast("Couldn't copy — select it from the log instead."); }
+  });
+  let t;
+  $("q").addEventListener("input", () => { clearTimeout(t); t = setTimeout(refreshUi, 150); });
+  ["cat", "dedupe"].forEach((id) => $(id).addEventListener("change", refreshUi));
+  $("zipName").addEventListener("input", () => { clearTimeout(t); t = setTimeout(refreshUi, 150); });
+
+  init(false);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script src="../../js/desktop.js"></script>
+<link id="favicon" rel="icon" type="image/png" href="https://raw.githubusercontent.com/securlydetected/assets/refs/heads/main/favicons/ico.png" />
+<title>WannaSmile | Desktop App</title>
+
+<style>
+/* Same theme variables as the other pages (themify.js sets them); the
+   installer window itself stays dark whatever the theme is. */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html {
+  min-height: 100%;
+  background: var(--main-bg, #111) center / cover fixed no-repeat;
+  background-color: #111;
+  overflow-x: hidden;
+}
+html.ws-bg-fallback { background-image: url("https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/main/themes/redux/mainBg.png"); }
+body {
+  min-height: 100vh;
+  overflow-x: clip;
+  padding: clamp(16px, 4vh, 48px) 16px 64px;
+  font-family: "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: #e9ebf2;
+  background:
+    linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px) 0 0 / 40px 40px,
+    linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px) 0 0 / 40px 40px,
+    rgba(6, 8, 12, 0.82);
+  backdrop-filter: blur(6px);
+  --acc: var(--accent-color, #f44);
+  --blue: #4cc2ff;
+  --panel: #11141b;
+  --line: #262a35;
+}
+a { color: inherit; }
+.wrap { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: clamp(18px, 3vh, 28px); }
+
+.back {
+  align-self: flex-start;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 7px 14px;
+  border: 1px solid #3a3f4c;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.45);
+  transition: border-color 0.15s, color 0.15s, transform 0.15s;
+}
+.back:hover { border-color: var(--acc); color: var(--acc); transform: translateX(-3px); }
+
+/* ── The installer window ── */
+.installer {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03) inset;
+  overflow: hidden;
+}
+.titlebar {
+  display: flex; align-items: center; gap: 10px;
+  height: 38px; padding: 0 0 0 12px;
+  background: #171a22; border-bottom: 1px solid var(--line);
+  font-size: 0.8rem; color: #b9bdca;
+}
+.titlebar img { width: 18px; height: 18px; }
+.titlebar .grow { flex: 1; }
+.winbtns { display: flex; height: 100%; }
+.winbtns span { width: 46px; display: grid; place-items: center; font-size: 0.72rem; color: #9ba0ae; }
+.winbtns span:last-child:hover { background: #c42b1c; color: #fff; }
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  gap: clamp(18px, 3vw, 36px);
+  padding: clamp(20px, 4vw, 40px);
+  background:
+    radial-gradient(900px 340px at 0% 0%, color-mix(in srgb, var(--acc) 18%, transparent), transparent 70%),
+    radial-gradient(700px 300px at 100% 100%, rgba(76,194,255,0.10), transparent 70%);
+}
+.identity { display: flex; flex-direction: column; gap: 14px; justify-content: center; }
+.app-icon {
+  width: 84px; height: 84px; border-radius: 22px;
+  display: grid; place-items: center;
+  background: #1a1d26;
+  border: 1px solid #333846;
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--acc) 14%, transparent), 0 10px 30px rgba(0,0,0,0.5);
+}
+.app-icon img { width: 62px; height: 62px; object-fit: contain; }
+h1 { font-size: clamp(1.7rem, 4.6vw, 2.5rem); line-height: 1.1; letter-spacing: -0.02em; }
+h1 small { display: block; font-size: 0.95rem; font-weight: 500; letter-spacing: 0; color: var(--blue); margin-top: 6px; }
+.lead { font-size: 0.95rem; line-height: 1.6; color: #b4b9c8; max-width: 44ch; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  font-size: 0.74rem; padding: 4px 10px; border-radius: 999px;
+  border: 1px solid #343949; background: #171a22; color: #c8ccd8;
+}
+.chip.warn { border-color: color-mix(in srgb, var(--acc) 70%, #000); color: #fff; }
+
+/* ── Illustration ── */
+.flow { display: flex; align-items: center; justify-content: center; }
+.flow svg { width: 100%; height: auto; max-height: 300px; }
+.flow text { font-family: inherit; fill: #aeb3c2; font-size: 11px; }
+.flow .node { fill: #161922; stroke: #3a3f50; stroke-width: 1.5; }
+.flow .path { fill: none; stroke: var(--blue); stroke-width: 2; stroke-linecap: round; stroke-dasharray: 5 7; animation: dash 1.4s linear infinite; opacity: 0.9; }
+.flow .path.live { stroke: var(--acc); animation-duration: 2s; }
+.flow .bar-bg { fill: #242836; }
+.flow .bar { fill: var(--blue); animation: fill 3.2s ease-in-out infinite; transform-origin: left center; transform-box: fill-box; }
+.flow .pulse { fill: var(--acc); animation: pulse 2.4s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
+@keyframes dash { to { stroke-dashoffset: -24; } }
+@keyframes fill { 0% { transform: scaleX(0.05); } 70%, 100% { transform: scaleX(1); } }
+@keyframes pulse { 0%, 100% { opacity: 0.35; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.15); } }
+
+/* ── Download strip ── */
+.get {
+  display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 20px;
+  padding: clamp(18px, 3vw, 30px);
+  border-top: 1px solid var(--line);
+  background: #0e1117;
+}
+.dl-col { display: flex; flex-direction: column; gap: 12px; }
+.dl-btn {
+  position: relative; display: flex; align-items: center; justify-content: center; gap: 14px;
+  padding: 18px 26px; border-radius: 14px; border: 0;
+  font: 700 1.15rem "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  color: #fff; text-decoration: none; cursor: pointer;
+  background: linear-gradient(135deg, var(--acc), color-mix(in srgb, var(--acc) 55%, #6a2cff));
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--acc) 45%, transparent), 0 1px 0 rgba(255,255,255,0.25) inset;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s;
+}
+.dl-btn:hover { transform: translateY(-2px); filter: brightness(1.08); }
+.dl-btn:active { transform: translateY(1px); }
+.dl-btn:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.dl-btn svg { width: 26px; height: 26px; flex: none; }
+.dl-btn[aria-disabled="true"] {
+  background: #20242e; color: #9aa0b0; cursor: not-allowed; box-shadow: none; filter: none; transform: none;
+  border: 1px dashed #3b4151;
+}
+.dl-sub { font-size: 0.78rem; color: #8d93a5; line-height: 1.5; }
+.status {
+  display: inline-flex; align-items: center; gap: 8px; align-self: flex-start;
+  font-size: 0.78rem; padding: 5px 12px; border-radius: 999px; background: #171a22; border: 1px solid #2f3442; color: #c8ccd8;
+}
+.status i { width: 8px; height: 8px; border-radius: 50%; background: #e0a100; }
+.status.ready i { background: #3ecf6e; }
+.status.app i { background: var(--blue); }
+
+.specs { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; font-size: 0.84rem; align-content: start; }
+.specs dt { color: #8d93a5; }
+.specs dd { color: #e3e6ee; word-break: break-word; }
+
+/* ── Steps ── */
+.panel { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); padding: clamp(18px, 3vw, 30px); }
+.panel h2 { font-size: 1.15rem; margin-bottom: 16px; }
+.steps { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; counter-reset: s; }
+.steps::before {
+  content: ""; position: absolute; top: 18px; left: 8%; right: 8%; height: 2px;
+  background: repeating-linear-gradient(90deg, var(--blue) 0 6px, transparent 6px 13px);
+  opacity: 0.5; animation: slide 1.6s linear infinite;
+}
+@keyframes slide { to { background-position-x: 13px; } }
+.step { position: relative; padding-top: 44px; font-size: 0.86rem; line-height: 1.6; color: #bcc1ce; }
+.step::before {
+  counter-increment: s; content: counter(s);
+  position: absolute; top: 0; left: 0; width: 38px; height: 38px; border-radius: 50%;
+  display: grid; place-items: center; font-weight: 700; color: #fff;
+  background: #1b1f29; border: 2px solid var(--blue);
+}
+.step b { display: block; color: #fff; margin-bottom: 2px; font-size: 0.95rem; }
+
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.note { padding: 14px 16px; border-radius: 10px; border: 1px solid #2c303c; background: #0e1117; font-size: 0.84rem; line-height: 1.6; color: #b4b9c8; }
+.note b { display: block; color: #fff; margin-bottom: 3px; }
+.note.key { border-color: color-mix(in srgb, var(--acc) 60%, #000); }
+
+@media (max-width: 760px) {
+  .hero, .get { grid-template-columns: 1fr; }
+  .steps { grid-template-columns: 1fr; }
+  .steps::before { display: none; }
+  .winbtns span { width: 38px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .flow .path, .flow .bar, .flow .pulse, .steps::before { animation: none; }
+  .flow .bar { transform: scaleX(0.7); }
+  .dl-btn, .back { transition: none; }
+}
+</style>
+</head>
+
+<body>
+<div class="wrap">
+  <a class="back" href="../../../">← Back to WannaSmile</a>
+
+  <section class="installer" aria-labelledby="appTitle">
+    <div class="titlebar" aria-hidden="true">
+      <img src="https://ws.ankomstudios.com/favicons/favicon.png" alt="" />
+      <span>WannaSmile Setup</span>
+      <span class="grow"></span>
+      <div class="winbtns"><span>&#x2013;</span><span>&#x25A1;</span><span>&#x2715;</span></div>
+    </div>
+
+    <div class="hero">
+      <div class="identity">
+        <div class="app-icon"><img src="https://ws.ankomstudios.com/favicons/favicon.png" alt="WannaSmile icon" /></div>
+        <h1 id="appTitle">WannaSmile <small>Desktop for Windows 11 · x64</small></h1>
+        <p class="lead">Use WannaSmile in its own Windows app window, without opening a browser yourself. It loads the live site, so it's always the current version.</p>
+        <div class="chips">
+          <span class="chip">Windows 11</span>
+          <span class="chip">x64</span>
+          <span class="chip warn">Internet connection required</span>
+        </div>
+      </div>
+
+      <div class="flow" aria-label="How it works: download, run the installer, open WannaSmile, which loads the live site over the internet">
+        <svg viewBox="0 0 520 300" role="img" aria-hidden="true">
+          <!-- download -> setup -> app -->
+          <g>
+            <rect class="node" x="14" y="40" width="96" height="96" rx="16" />
+            <path d="M62 66v34m0 0-14-14m14 14 14-14M44 116h36" fill="none" stroke="#4cc2ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+            <text x="62" y="158" text-anchor="middle">Download</text>
+          </g>
+          <path class="path" d="M112 88 H172" />
+          <g>
+            <rect class="node" x="174" y="26" width="172" height="124" rx="12" />
+            <rect x="174" y="26" width="172" height="22" rx="12" fill="#1d212c" />
+            <circle cx="190" cy="37" r="4" fill="#ff5f57" /><circle cx="204" cy="37" r="4" fill="#febc2e" /><circle cx="218" cy="37" r="4" fill="#28c840" />
+            <text x="260" y="74" text-anchor="middle">Installing…</text>
+            <rect class="bar-bg" x="194" y="90" width="132" height="10" rx="5" />
+            <rect class="bar" x="194" y="90" width="132" height="10" rx="5" />
+            <text x="260" y="124" text-anchor="middle">Setup</text>
+          </g>
+          <path class="path" d="M348 88 H402" />
+          <g>
+            <rect class="node" x="404" y="26" width="102" height="124" rx="12" />
+            <rect x="404" y="26" width="102" height="22" rx="12" fill="#1d212c" />
+            <image href="https://ws.ankomstudios.com/favicons/favicon.png" x="429" y="58" width="52" height="52" />
+            <text x="455" y="132" text-anchor="middle">WannaSmile</text>
+          </g>
+          <!-- app <-> live site (internet) -->
+          <path class="path live" d="M455 152 V214 H300" />
+          <g>
+            <circle class="pulse" cx="260" cy="214" r="9" />
+            <rect class="node" x="150" y="186" width="130" height="56" rx="14" />
+            <text x="215" y="212" text-anchor="middle">wannasmile site</text>
+            <text x="215" y="228" text-anchor="middle">+ live data</text>
+          </g>
+          <text x="470" y="262" text-anchor="end">needs internet</text>
+        </svg>
+      </div>
+    </div>
+
+    <div class="get">
+      <div class="dl-col">
+        <span class="status" id="dlStatus"><i></i><span id="dlStatusText">Checking…</span></span>
+        <a class="dl-btn" id="dlBtn" href="#" aria-disabled="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M4 20h16"/></svg>
+          <span id="dlLabel">Download for Windows</span>
+        </a>
+        <p class="dl-sub" id="dlSub"></p>
+      </div>
+      <dl class="specs">
+        <dt>Platform</dt><dd>Windows 11 (64-bit, x64)</dd>
+        <dt>Version</dt><dd id="specVersion">Not released yet</dd>
+        <dt>Size</dt><dd id="specSize">—</dd>
+        <dt>Requires</dt><dd>Internet connection, Microsoft Edge WebView2 Runtime</dd>
+        <dt>Checksum</dt><dd id="specSha">—</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="stepsTitle">
+    <h2 id="stepsTitle">Install in three steps</h2>
+    <div class="steps">
+      <div class="step"><b>Download</b>Get the installer using the button above. It's one file.</div>
+      <div class="step"><b>Run the installer</b>Follow the setup window. If your PC doesn't have the Microsoft Edge WebView2 Runtime yet, setup installs it for you.</div>
+      <div class="step"><b>Open WannaSmile</b>Start it from the Start Menu. It opens in its own window and loads the site.</div>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="notesTitle">
+    <h2 id="notesTitle">Good to know</h2>
+    <div class="notes">
+      <div class="note key"><b>Internet is required</b>The app fetches the live site, its data and its assets from the internet each time. It does not work offline. If it can't connect, it shows a message with a Retry button.</div>
+      <div class="note"><b>Same WannaSmile</b>Your library, settings and ticket work the same way as in the browser, but the app keeps its own saved data, separate from your browser's: use Export in the browser and import it in the app to move your ticket over. Links to other websites open in your normal browser.</div>
+      <div class="note"><b>WebView2 Runtime</b>The app is built on Microsoft's Edge WebView2. The Runtime is a separate Microsoft component that setup installs only if it's missing.</div>
+    </div>
+  </section>
+</div>
+
+<script>
+// ── Installer details ───────────────────────────────────────────────────
+// The page looks up the newest GitHub Release of `repo` and links its
+// installer asset, so publishing a release is all it takes. Nothing is
+// hardcoded about a version.
+//   repo         "owner/name" of the repo that holds the Releases. ASSUMED
+//                value below: change it to the real one.
+//   asset        exact file name of the installer attached to each release
+//                (keep it the same every release; see desktop/installer).
+//   downloadUrl  optional manual override (https only). Leave "" to use the
+//                latest release.
+//   version / sizeLabel / sha256  optional manual overrides for the details.
+// If no release exists yet, or GitHub can't be reached, the page shows
+// "Coming soon" and no download button.
+var DESKTOP_APP = {
+  repo: "ankomstudios/wannasmile-exe",
+  asset: "WannaSmile-Setup-x64.exe",
+  downloadUrl: "",
+  version: "",
+  sizeLabel: "",
+  sha256: ""
+};
+
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var btn = $("dlBtn"), label = $("dlLabel"), status = $("dlStatus"), statusText = $("dlStatusText"), sub = $("dlSub");
+
+  var inApp = !!(window.WS_Desktop && window.WS_Desktop.isApp);
+  var httpsOnly = /^https:\/\/[^\s]+$/i;
+
+  function sizeText(bytes) {
+    return bytes > 0 ? (bytes / 1048576).toFixed(1) + " MB" : "";
+  }
+
+  function unavailable() {
+    status.classList.remove("ready");
+    statusText.textContent = "Not published yet";
+    label.textContent = "Coming soon";
+    sub.textContent = "The Windows installer hasn't been released. This button turns into the download once it is.";
+    btn.setAttribute("aria-disabled", "true");
+    btn.removeAttribute("href");
+    btn.removeAttribute("download");
+    btn.onclick = function (e) { e.preventDefault(); };
+  }
+
+  function ready(info) {
+    if (!httpsOnly.test(info.url || "")) return unavailable();
+    status.classList.add("ready");
+    statusText.textContent = info.version ? "Version " + info.version + " available" : "Available";
+    label.textContent = "Download for Windows";
+    sub.textContent = "Windows 11 · x64 · an internet connection is required to use the app. Windows may show a SmartScreen warning because the installer is not code-signed yet; compare the checksum below if you want to verify it.";
+    btn.href = info.url;
+    btn.setAttribute("download", "");
+    btn.setAttribute("rel", "noopener");
+    btn.removeAttribute("aria-disabled");
+    btn.onclick = null;
+    if (info.version) $("specVersion").textContent = info.version;
+    if (info.size) $("specSize").textContent = info.size;
+    if (info.sha256) $("specSha").textContent = info.sha256;
+  }
+
+  if (inApp) {
+    status.classList.add("app");
+    statusText.textContent = "You're using the desktop app";
+    label.textContent = "You're already in the app";
+    sub.textContent = "Nothing to install. Updates to the site appear here automatically.";
+    btn.setAttribute("aria-disabled", "true");
+    btn.removeAttribute("href");
+    return;
+  }
+
+  // Manual override wins.
+  if (String(DESKTOP_APP.downloadUrl || "").trim()) {
+    return ready({
+      url: String(DESKTOP_APP.downloadUrl).trim(), version: DESKTOP_APP.version,
+      size: DESKTOP_APP.sizeLabel, sha256: DESKTOP_APP.sha256
+    });
+  }
+
+  unavailable();
+  statusText.textContent = "Checking…";
+  if (!/^[\w.-]+\/[\w.-]+$/.test(DESKTOP_APP.repo || "") || !window.fetch) return unavailable();
+
+  fetch("https://api.github.com/repos/" + DESKTOP_APP.repo + "/releases/latest", { headers: { "Accept": "application/vnd.github+json" } })
+    .then(function (r) { if (!r.ok) throw new Error("no release"); return r.json(); })
+    .then(function (rel) {
+      var assets = (rel && rel.assets) || [];
+      var a = null;
+      for (var i = 0; i < assets.length; i++) if (assets[i].name === DESKTOP_APP.asset) a = assets[i];
+      if (!a || rel.draft || rel.prerelease) throw new Error("no installer asset");
+      var digest = String(a.digest || "");
+      ready({
+        url: a.browser_download_url,
+        version: DESKTOP_APP.version || String(rel.tag_name || "").replace(/^v/i, ""),
+        size: DESKTOP_APP.sizeLabel || sizeText(a.size),
+        sha256: DESKTOP_APP.sha256 || (/^sha256:[0-9a-f]{64}$/i.test(digest) ? digest.slice(7) : "")
+      });
+    })
+    .catch(unavailable);
+})();
+</script>
+
+<script src="../../js/endpoints.js"></script>
+<script src="../../js/utils.js"></script>
+<script src="../../js/ticket.js"></script>
+<script src="../../js/msgcore.js"></script>
+<script src="../../js/themify.js"></script>
+<script src="../../js/cursors.js"></script>
+</body>
+</html>
