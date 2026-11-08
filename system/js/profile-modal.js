@@ -163,6 +163,8 @@
     publicProfile = null;
     stage = "view";
     modal.dataset.stage = "view";
+    modal.scrollTop = 0;
+    modal.scrollLeft = 0;
     frameHeight = 420;
     paintButtons();
     fitFrame();
@@ -200,6 +202,8 @@
       stage = "view";
       modal.dataset.stage = "view";
       modal.setAttribute("aria-label", `Public profile for @${name}`);
+      modal.scrollTop = 0;
+      modal.scrollLeft = 0;
       frameHeight = 420;
       paintButtons();
       fitFrame();

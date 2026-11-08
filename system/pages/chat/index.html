@@ -109,6 +109,7 @@ input[type="text"]:focus, textarea:focus { border-color: var(--accent-color, #f4
 .user-dock .ws-bot-shield { flex: none; }
 .user-dock #meUser { display: block; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .user-dock .fa-chevron-up { margin-left: auto; opacity: .7; }
+.account-actions { display: flex; justify-content: flex-end; padding: 6px 12px 8px; border-top: 1px solid rgba(255,255,255,0.12); }
 .add { display: flex; gap: 8px; padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.12); }
 .list { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
 .group { font-size: 0.68rem; font-weight: bold; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.65; padding: 12px 14px 4px; }
@@ -205,7 +206,7 @@ div.conv-row { cursor: default; }
   .status.sync::before, .ws-dots i { animation: none; }
 }
 body.profile-modal-open { overflow: hidden; }
-#profileModal.pfm { display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; overflow:auto; padding:8px; background:rgba(0,0,0,.62); backdrop-filter:blur(8px); }
+#profileModal.pfm { display:none; position:fixed; inset:0; width:100vw; height:100vh; height:100dvh; box-sizing:border-box; z-index:9999; align-items:center; justify-content:center; overflow:auto; padding:8px; background:rgba(0,0,0,.62); backdrop-filter:blur(8px); }
 #profileModal.pfm.visible { display:flex; }
 #profileModal .pfm-effects { position:fixed; inset:0; z-index:0; display:block; width:100vw; height:100vh; pointer-events:none; }
 #profileModal .pfm-effects[hidden] { display:none; }
@@ -260,6 +261,11 @@ body.profile-modal-open { overflow: hidden; }
         </span>
         <i class="fa-solid fa-chevron-up" aria-hidden="true"></i>
       </button>
+      <div class="account-actions">
+        <button type="button" class="btn ghost sm" id="logoutAccount" data-logout-handler="chat" hidden>
+          <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i> Log out
+        </button>
+      </div>
     </aside>
 
     <section class="conv" aria-label="Conversation">
@@ -300,11 +306,11 @@ body.profile-modal-open { overflow: hidden; }
 
 <script src="../../js/endpoints.js"></script>
 <script src="../../js/utils.js"></script>
-<script src="../../js/ticket.js"></script>
+<script src="../../js/ticket.js?v=account-logout"></script>
 <script src="../../js/themify.js?v=theme-fallback-favicon"></script>
 <script src="../../js/cursors.js"></script>
 <script src="../../js/msgcore.js?v=2.4.0-public-profiles"></script>
-<script src="../../js/profile-modal.js?v=2.4.0-public-profiles"></script>
-<script src="../../js/chat.js?v=2.4.0-public-profiles"></script>
+<script src="../../js/profile-modal.js?v=profile-modal-centering"></script>
+<script src="../../js/chat.js?v=account-logout"></script>
 </body>
 </html>

@@ -56,14 +56,14 @@
 <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.9.0/cdn/themes/dark.css" /></noscript>
 <!-- Shoelace components (sl-alert for achievement pop-ups, credits.js). -->
 <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.9.0/cdn/shoelace-autoloader.js"></script>
-<link rel="stylesheet" href="system/css/main.css" />
+<link rel="stylesheet" href="system/css/main.css?v=profile-frame-scope" />
 <link rel="stylesheet" href="system/css/widgets.css" />
 <link rel="stylesheet" href="system/css/shortcuts.css" />
 <link rel="stylesheet" href="system/css/daily.css" />
 <link rel="stylesheet" href="system/css/rusure.css" />
 <link rel="stylesheet" href="system/css/refer.css" />
 <link rel="stylesheet" href="system/css/tutorial.css" />
-<link rel="stylesheet" href="system/css/profile.css" />
+<link rel="stylesheet" href="system/css/profile.css?v=profile-modal-centering" />
 <link rel="stylesheet" href="system/css/updates.css" />
 
 <script>
@@ -250,6 +250,7 @@
     <code id="dashTicketId" role="button" tabindex="0" hidden></code>
   </div>
   <a href="#" id="openUpdates" title="View project updates">Project updates</a>
+  <a href="#" id="logoutAccount" title="Sign out of your WannaSmile account" hidden>Log out</a>
     <a href="system/pages/credits-n-achievements/index.html" target="_blank" id="openCredits" title="Your credits, achievements and early unlocks">Credits &amp; achievements</a>
   <a href="#" id="openRefer" title="Share WannaSmile with a friend">Refer a friend</a>
     <a href="#" id="openTour" title="Walk through the site again">Tutorial</a>
@@ -330,14 +331,14 @@
 <script defer src="system/js/utils.js"></script>
 <script defer src="system/js/datacache.js"></script>
 <script defer src="system/js/paging.js"></script>
-<script defer src="system/js/ticket.js"></script>
+<script defer src="system/js/ticket.js?v=account-logout"></script>
 <script defer src="system/js/themify.js?v=theme-fallback-favicon"></script>
 <script defer src="system/js/frames.js"></script>
 <script defer src="system/js/wrappers.js"></script>
 <script defer src="system/js/cursors.js"></script>
 <script defer src="system/js/sanitizer.js"></script>
-<script defer src="system/js/profile.js"></script>
-<script defer src="system/js/profile-modal.js?v=2.4.0-public-profiles"></script>
+<script defer src="system/js/profile.js?v=profile-frame-scope"></script>
+<script defer src="system/js/profile-modal.js?v=profile-modal-centering"></script>
 <script defer src="system/js/msgcore.js?v=2.4.0-public-profiles"></script>
 <script defer src="system/js/settings.js?v=theme-fallback-favicon"></script>
 <script defer src="system/js/ui.js"></script>

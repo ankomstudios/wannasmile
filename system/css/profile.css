@@ -285,14 +285,11 @@
   transition: filter 0.15s ease;
 }
 #profileOverlayPanel .pf-avatar-btn,
-.profile-preview,
-#pfp { border-radius: 50%; }
+.profile-preview { border-radius: 50%; }
 .pf-avatar-btn[data-avatar-shape="rounded"],
-.profile-preview[data-avatar-shape="rounded"],
-#pfp[data-avatar-shape="rounded"] { border-radius: 22%; }
+.profile-preview[data-avatar-shape="rounded"] { border-radius: 22%; }
 .pf-avatar-btn[data-avatar-shape="square"],
-.profile-preview[data-avatar-shape="square"],
-#pfp[data-avatar-shape="square"] { border-radius: 0; }
+.profile-preview[data-avatar-shape="square"] { border-radius: 0; }
 .pf-avatar-pencil {
   inset: 0;
   margin: auto;
@@ -806,7 +803,7 @@
 .pf-position-control output { min-width: 5ch; text-align: right; font-variant-numeric: tabular-nums; }
 
 /* Frames with a blend mode (FramesWS `blend`) blend with the picture under them. */
-.pfp-wrap, .pf-avatar-btn { isolation: isolate; }
+.pf-avatar-btn { isolation: isolate; }
 
 /* Library head: title + close on the first row, tabs on their own row so
    three tabs never squeeze the close button. */
@@ -974,7 +971,7 @@
 }
 
 /* ── Homepage profile modal: the card on its own, buttons underneath ── */
-.pfm{display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;padding:max(8px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));
+.pfm{display:none;position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;box-sizing:border-box;z-index:9999;align-items:center;justify-content:center;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;padding:max(8px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left));
   background:radial-gradient(circle,rgba(255,255,255,.12) 1.5px,transparent 2px) 0 0/22px 22px,rgba(0,0,0,.45);
   backdrop-filter:blur(9px) saturate(1.3);-webkit-backdrop-filter:blur(9px) saturate(1.3);outline:none}
 .pfm.visible{display:flex;animation:pfm-fade .25s ease}

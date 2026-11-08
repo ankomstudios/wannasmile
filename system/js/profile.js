@@ -278,28 +278,9 @@ function paintAvatarShape(shape) {
   if (avatarButton) avatarButton.dataset.avatarShape = selected;
   const preview = document.getElementById("profilePreview");
   if (preview) preview.dataset.avatarShape = selected;
-  const headerAvatar = document.getElementById("pfp");
-  if (headerAvatar) headerAvatar.dataset.avatarShape = selected;
   document.getElementById("profileAvatarShapeChoices")?.querySelectorAll("[data-avatar-shape]").forEach(button => {
     button.setAttribute("aria-pressed", String(button.dataset.avatarShape === selected));
   });
-}
-
-// The header avatar is a bare <img>; give it a wrapper + a frame layer once.
-function headerFrameEl() {
-  const pfp = document.getElementById("pfp");
-  if (!pfp) return null;
-  let wrap = pfp.parentElement;
-  if (!wrap || !wrap.classList.contains("pfp-wrap")) {
-    wrap = document.createElement("span");
-    wrap.className = "pfp-wrap";
-    pfp.parentNode.insertBefore(wrap, pfp);
-    wrap.appendChild(pfp);
-    const f = document.createElement("img");
-    f.id = "pfpFrame"; f.className = "pf-frame"; f.alt = ""; f.draggable = false; f.hidden = true;
-    wrap.appendChild(f);
-  }
-  return document.getElementById("pfpFrame");
 }
 
 // The modal card, from saved + pending values.
@@ -433,7 +414,6 @@ function loadProfile() {
 
   const pfpEl = document.getElementById("pfp");
   if (pfpEl) paintPic(pfpEl, saved.pic, saved.pixelated, false);
-  paintFrame(headerFrameEl(), saved.frame, saved.frameScale);
 
   renderProfileCard();
 }
@@ -522,7 +502,6 @@ window.WS_ProfileApply = (profile) => {
     wrapper: profile.pwrapper || "",
     wrapperOpacity: String(profile.pwrapperOpacity ?? 100),
   });
-  paintFrame(headerFrameEl(), profile.pframe || "", Number(profile.pframeScale) / 100);
   return saved;
 };
 

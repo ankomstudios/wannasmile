@@ -699,6 +699,21 @@
       if (typeof window.openProfileOverlay === "function") window.openProfileOverlay();
       else toast("Your profile editor is unavailable right now.");
     });
+    $("logoutAccount")?.addEventListener("click", async (event) => {
+      event.preventDefault();
+      const button = event.currentTarget;
+      button.disabled = true;
+      try {
+        if (!window.WS_Ticket?.logout) throw new Error("The account service could not sign out.");
+        await window.WS_Ticket.logout();
+        gate("You are signed out", "You have been logged out on this device. Sign in on the WannaSmile homepage to chat again.", "Go to WannaSmile");
+      } catch (error) {
+        console.error("[chat] couldn't log out:", error);
+        gate("Signed out on this device", error.message || "The server could not revoke this session.", "Go to WannaSmile");
+      } finally {
+        button.disabled = false;
+      }
+    });
 
     if (M) {
       // A notification (or the DM button) asking for a conversation while this page is open.

@@ -103,13 +103,37 @@
   }
 
   function revoke() {
+    clearAuthState();
+    document.dispatchEvent(new CustomEvent("ws:ticket-gate"));
+    return ready;
+  }
+
+  function clearAuthState() {
     write(ID_KEY, "");
     write(SECRET_KEY, "");
     write(STATUS_KEY, "");
     write(USER_KEY, "");
     write(EMAIL_KEY, "");
     changed();
-    document.dispatchEvent(new CustomEvent("ws:ticket-gate"));
+  }
+
+  async function logout() {
+    const accountId = id();
+    const key = secret();
+    let remoteError = null;
+    if (accountId && key) {
+      try {
+        const result = await request("/auth/logout", { ticket: accountId, key });
+        if (result?.ok !== true) throw new Error(result?.error || "The account service could not end this session.");
+      } catch (error) {
+        remoteError = error;
+      }
+    }
+    clearAuthState();
+    if (remoteError) {
+      console.error("[account] couldn't revoke the server session:", remoteError);
+      throw new Error("You are signed out on this device, but the server could not revoke the session.");
+    }
     return ready;
   }
 
@@ -127,6 +151,11 @@
   };
 
   function paintDashboard() {
+    const logout = document.getElementById("logoutAccount");
+    if (logout) {
+      logout.hidden = !approved();
+      logout.setAttribute("aria-hidden", String(!approved()));
+    }
     const element = document.getElementById("dashTicketId");
     if (!element) return;
     const accountId = id();
@@ -146,6 +175,21 @@
     element?.addEventListener("keydown", (event) => {
       if (event.key === "Enter" || event.key === " ") { event.preventDefault(); element.click(); }
     });
+    const logoutControl = document.getElementById("logoutAccount");
+    if (logoutControl && logoutControl.dataset.logoutHandler !== "chat") {
+      logoutControl.addEventListener("click", async (event) => {
+        event.preventDefault();
+        const menu = document.getElementById("dashboardMenu");
+        if (menu?.style.display === "block") document.getElementById("dashboardBtn")?.click();
+        try {
+          await logout();
+          if (typeof showToast === "function") showToast("You have been logged out.");
+        } catch (error) {
+          console.error("[account] couldn't log out:", error);
+          if (typeof showToast === "function") showToast(error.message || "Could not log out.");
+        }
+      });
+    }
   });
 
   window.WS_Ticket = {
@@ -160,6 +204,7 @@
     check,
     verify,
     revoke,
+    logout,
   };
 
   if (!id() || !secret()) {
