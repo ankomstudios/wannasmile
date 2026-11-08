@@ -64,6 +64,7 @@
   }
 
   async function api(path, method = "POST", data = null) {
+    if (!isAdmin) throw new Error("Admin access is required.");
     const auth = credentials();
     if (!auth.ticket || !auth.key) throw new Error("Sign in with an administrator account first.");
     let url = `${API}${path}`;

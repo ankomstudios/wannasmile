@@ -23,7 +23,7 @@
 
 # 𝕧𝟚.𝟜.𝟘
 
-**WannaSmile V2.4.0 is scheduled to drop tomorrow at 9:00 AM.** This update brings domain-based URLs, a profile revamp with public profiles, and a fix for global chat. It also restores the missing icons on pages 14-15, adds more ports and fixes, moves the project to a fully SQL-based setup, and updates outdated components.
+**WannaSmile V2.4.0 — Nexus is planned for November 13, 2026.** This update brings domain-based URLs, a public profile revamp, fixes for global chat, restored icons on library pages 14–15, expanded port support and compatibility fixes, a SQL-backed library with single-file asset delivery, and refreshed components. Public bot styling is isolated from personal profile drafts and managed bot profiles can only be changed by verified admin accounts.
 
 ### 𝕚𝕟 𝕥𝕙𝕖 𝕨𝕠𝕣𝕜𝕤
 
