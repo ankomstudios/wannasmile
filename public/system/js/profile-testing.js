@@ -45,7 +45,9 @@ const DEF = {layoutVersion:2,divStyle:"none",divFill:"color",divColor:"#ff4444",
   fx_t:"none",fx_n:60,nm:"",nf:"system-ui,sans-serif",ns:24,nc:"#f2f3f5",no:0,nb:true,ni:false,statusMode:"green",
   pimg:"",pimgRemoved:false,pframe:"",pframeScale:120,pframeX:0,pframeY:0,pwrapper:"",pwrapperMode:"image",pwrapperColor:"#383a40",pwrapperOpacity:100,pfpRadius:50,pfpSize:116,pfpAlign:"center",pfpBorderSize:4,pfpBorderMode:"default",pfpBorderColor:"#383a40",bimgMedia:"",bannerTint:"#ff4444",pixelate:0,
   npKind:"none",npId:"ember",npImg:"",npFit:"cover",npOpacity:100,npDim:30,npAnim:"none",npDur:8,
-  cbType:"gradient",cbImg:"",cbAnim:"none",cbDur:6,cbSlice:30,cbRepeat:"stretch",actShow:true};
+  cbType:"gradient",cbImg:"",cbAnim:"none",cbDur:6,cbSlice:30,cbRepeat:"stretch",actShow:true,
+  bioStyle:"inherit",bioFont:"system-ui,sans-serif",bioSize:13,bioColor:"#f2f3f5",bioOutline:0,bioBold:false,bioItalic:false,
+  sinceStyle:"inherit",sinceFont:"system-ui,sans-serif",sinceSize:12,sinceColor:"#e1e2e4",sinceOutline:0,sinceBold:false,sinceItalic:false};
 const FALLBACK_ACH = {
   wannatutorialize:{"metadata-title":"WannaTutorialize","image-url":"https://placehold.co/64x64/ff4444/ffffff.png?text=WT"},
   criticalReviewer:{"metadata-title":"Critical Reviewer","image-url":"https://placehold.co/64x64/ff8a00/111111.png?text=CR"},
@@ -65,11 +67,11 @@ const PUBLIC_PROFILE_FONTS = new Set([
 ]);
 const PUBLIC_PROFILE_MEDIA = new Set(["bimg", "bimgMedia", "pimg", "pframe", "pwrapper", "npImg", "cbImg"]);
 const PUBLIC_PROFILE_COLORS = new Set([
-  "divColor", "bc1", "bc2", "qColor", "nc", "pwrapperColor", "pfpBorderColor", "bannerTint",
+  "divColor", "bc1", "bc2", "qColor", "nc", "pwrapperColor", "pfpBorderColor", "bannerTint", "bioColor", "sinceColor",
 ]);
 const PUBLIC_PROFILE_TOKENS = new Set([
   "divStyle", "divFill", "fx_t", "statusMode", "pwrapperMode", "pfpAlign", "pfpBorderMode",
-  "npKind", "npId", "npFit", "npAnim", "cbType", "cbAnim", "cbRepeat",
+  "npKind", "npId", "npFit", "npAnim", "cbType", "cbAnim", "cbRepeat", "bioStyle", "sinceStyle",
 ]);
 function normalizePublicProfile(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Invalid profile data.");
@@ -99,7 +101,7 @@ function normalizePublicProfile(value) {
         }
       } else if (PUBLIC_PROFILE_COLORS.has(key)) {
         if (/^#[0-9a-f]{3,8}$/i.test(text)) profile[key] = text;
-      } else if (key === "nf") {
+      } else if (key === "nf" || key === "bioFont" || key === "sinceFont") {
         if (PUBLIC_PROFILE_FONTS.has(text)) profile[key] = text;
       } else if (PUBLIC_PROFILE_TOKENS.has(key)) {
         if (/^[a-z0-9_-]{1,40}$/i.test(text)) profile[key] = text;
@@ -335,9 +337,11 @@ function populatePresets() {
   });
 }
 
-const SIMPLE = ["divStyle","divFill","divColor","divSize","bw","bc1","bc2","ba","bh","r","qText","qSize","qColor","fx_t","fx_n","nm","nf","ns","nc","no","pimg","pframe","pframeScale","pframeX","pframeY","pwrapper","pwrapperMode","pwrapperColor","pwrapperOpacity","pfpSize","pfpBorderSize","pfpBorderMode","pfpBorderColor","bimgMedia","bannerTint","pfpRadius","pixelate","statusMode","npImg","npFit","npOpacity","npDim","npAnim","npDur","cbType","cbImg","cbAnim","cbDur","cbSlice","cbRepeat"];
+// Bio / date font pickers offer exactly the same fonts as the display name.
+document.querySelectorAll("select.font-copy").forEach((sel) => { sel.innerHTML = $("nf").innerHTML; });
+const SIMPLE = ["bioStyle","bioFont","bioSize","bioColor","bioOutline","sinceStyle","sinceFont","sinceSize","sinceColor","sinceOutline","divStyle","divFill","divColor","divSize","bw","bc1","bc2","ba","bh","r","qText","qSize","qColor","fx_t","fx_n","nm","nf","ns","nc","no","pimg","pframe","pframeScale","pframeX","pframeY","pwrapper","pwrapperMode","pwrapperColor","pwrapperOpacity","pfpSize","pfpBorderSize","pfpBorderMode","pfpBorderColor","bimgMedia","bannerTint","pfpRadius","pixelate","statusMode","npImg","npFit","npOpacity","npDim","npAnim","npDur","cbType","cbImg","cbAnim","cbDur","cbSlice","cbRepeat"];
 const DATA_FIELDS = ["pframe","npImg","cbImg"];   // may hold an imported data: image; never dumped into the URL box
-const rangeUnits = { bh:"px", bw:"px", divSize:"px", fx_n:"", ns:"px", no:"px", pfpSize:"px", pfpRadius:"%", pfpBorderSize:"px", pframeScale:"%", pframeX:"px", pframeY:"px", pwrapperOpacity:"%", pixelate:"", qSize:"px", r:"px", npOpacity:"%", npDim:"%", npDur:"s", cbDur:"s", cbSlice:"px" };
+const rangeUnits = { bh:"px", bw:"px", divSize:"px", fx_n:"", ns:"px", no:"px", pfpSize:"px", pfpRadius:"%", pfpBorderSize:"px", pframeScale:"%", pframeX:"px", pframeY:"px", pwrapperOpacity:"%", pixelate:"", qSize:"px", r:"px", npOpacity:"%", npDim:"%", npDur:"s", cbDur:"s", cbSlice:"px", bioSize:"px", bioOutline:"px", sinceSize:"px", sinceOutline:"px" };
 function showRangeValue(input) {
   const output = input.nextElementSibling;
   const min = Number(input.min) || 0;
@@ -396,7 +400,7 @@ profileBio.addEventListener("input", () => {
   S.bioText = value;
   if (!save()) notifyProfile("Could not save your bio. Check browser storage and try again.", "danger");
 });
-["nb","ni","achDemo","actShow"].forEach((k) => { const el = $(k); if (!el) return; el.checked = !!S[k]; el.addEventListener("change", () => { S[k] = el.checked; save(); paint(); }); });
+["nb","ni","bioBold","bioItalic","sinceBold","sinceItalic","achDemo","actShow"].forEach((k) => { const el = $(k); if (!el) return; el.checked = !!S[k]; el.addEventListener("change", () => { S[k] = el.checked; save(); paint(); }); });
 function syncProfileEditorFields() {
   SIMPLE.forEach((key) => {
     const input = $(key);
@@ -404,7 +408,7 @@ function syncProfileEditorFields() {
     input.value = DATA_FIELDS.includes(key) && String(S[key]).startsWith("data:image/") ? "" : (S[key] ?? "");
     if (input.type === "range") showRangeValue(input);
   });
-  ["nb", "ni", "achDemo", "actShow"].forEach((key) => {
+  ["nb", "ni", "bioBold", "bioItalic", "sinceBold", "sinceItalic", "achDemo", "actShow"].forEach((key) => {
     if ($(key)) $(key).checked = !!S[key];
   });
   $("profileBio").textContent = S.bioText || "";
@@ -584,6 +588,48 @@ function getRenderedAvatarSize() {
     ? Math.min(Number(S.pfpSize), Math.max(84, (window.innerWidth - 72) * 0.4))
     : Number(S.pfpSize);
 }
+// Bio and member-since text follow the display name style until a "Custom" style is chosen.
+function paintTextStyle(el, prefix) {
+  if (!el) return;
+  const num = (value, lo, hi, fallback) => { const n = Number(value); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : fallback; };
+  const custom = S[prefix + "Style"] === "custom";
+  const st = el.style;
+  let outline;
+  if (custom) {
+    st.fontFamily = S[prefix + "Font"] || DEF[prefix + "Font"];
+    st.fontSize = `${num(S[prefix + "Size"], 10, 28, DEF[prefix + "Size"])}px`;
+    st.color = S[prefix + "Color"] || DEF[prefix + "Color"];
+    st.fontWeight = S[prefix + "Bold"] ? "700" : "400";
+    st.fontStyle = S[prefix + "Italic"] ? "italic" : "normal";
+    outline = num(S[prefix + "Outline"], 0, 3, 0);
+  } else {
+    st.fontFamily = S.nf;
+    st.fontSize = `${DEF[prefix + "Size"]}px`;
+    st.color = S.nc;
+    st.fontWeight = S.nb ? "700" : "400";
+    st.fontStyle = S.ni ? "italic" : "normal";
+    outline = Math.min(2, num(S.no, 0, 8, 0));   // small text can't take the name's full outline
+  }
+  st.webkitTextStroke = outline ? `${outline}px #000` : "0";
+  st.paintOrder = "stroke fill";
+}
+function paintTextStyles() {
+  paintTextStyle($("profileBio"), "bio");
+  paintTextStyle($("memberSince"), "since");
+  ["bio", "since"].forEach((prefix) => { $(prefix + "Custom").hidden = S[prefix + "Style"] !== "custom"; });
+}
+// First time a text style goes Custom, start from the display name look so it can be tweaked.
+["bio", "since"].forEach((prefix) => {
+  $(prefix + "Style").addEventListener("change", () => {
+    if (S[prefix + "Style"] !== "custom") return;
+    const untouched = ["Font", "Color", "Outline", "Bold", "Italic"].every((k) => S[prefix + k] === DEF[prefix + k]);
+    if (!untouched) return;
+    S[prefix + "Font"] = S.nf; S[prefix + "Color"] = S.nc; S[prefix + "Bold"] = !!S.nb; S[prefix + "Italic"] = !!S.ni;
+    S[prefix + "Outline"] = Math.min(2, Number(S.no) || 0);
+    syncProfileEditorFields();
+    save();
+  });
+});
 function paint() {
   const card = $("card"), st = card.style;
   st.setProperty("--bw", S.bw + "px"); st.setProperty("--bc1", S.bc1); st.setProperty("--bc2", S.bc2);
@@ -809,6 +855,7 @@ function paint() {
   syncBannerFields();
   paintBorder();
   paintNameplate();
+  paintTextStyles();
   paintTiles();
   startFx();
 }
@@ -1356,21 +1403,43 @@ $("removeProfileImage").addEventListener("click", () => {
   paint();
   renderPick("avatar");
 });
+let SHARED_MEDIA = [];
+function dedupeMedia(items) {
+  const seen = new Set();
+  return items.filter((it) => it.url && !seen.has(it.url) && seen.add(it.url));
+}
+function buildSharedMedia(wr, bn, np, ext) {
+  const items = dedupeMedia([
+    ...(Array.isArray(wr) ? wr : []).filter((r) => r.id).map((r) => ({ label: r.name || r.id, url: `${MB}wrappers/${r.id}/splash.${ext(r)}`, kind: "wrapper" })),
+    ...(Array.isArray(bn) ? bn : []).filter((r) => r.src).map((r) => ({ label: r.name || r.identification, url: r.src, thumb: r.thumb || r.src, kind: "banner" })),
+    ...(Array.isArray(np) ? np : []).filter((r) => r.id).map((r) => ({ label: r.name || r.id, url: `${MB}nameplates/${r.id}/splash.${ext(r)}`, kind: "nameplate" })),
+  ]);
+  // Two different images can share a name across the old catalogs; tell them apart.
+  const counts = new Map();
+  items.forEach((it) => counts.set(it.label.toLowerCase(), (counts.get(it.label.toLowerCase()) || 0) + 1));
+  items.forEach((it) => { if (counts.get(it.label.toLowerCase()) > 1) it.label = `${it.label} (${it.kind})`; });
+  return items.sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: "base" }));
+}
 async function loadCatalogs() {
   const [fr, wr, bn, np] = await Promise.all(["frames", "wrappers", "banners", "nameplates"].map(getJson));
-  if (Array.isArray(np)) NP_CATALOG = np.filter((r) => r.id).map((r) => ({ label: r.name || r.id, url: `${MB}nameplates/${r.id}/splash.${r.ext || "png"}` }));
   const ext = (r) => r.ext || "png";
+  // Wrappers, banners and nameplates all pick from ONE library (their catalogs merged).
+  SHARED_MEDIA = buildSharedMedia(wr, bn, np, ext);
+  NP_CATALOG = SHARED_MEDIA;
   if (fr) PICK.frame.items = fr.filter((r) => r.id).map((r) => ({ label: r.name || r.id, url: `${MB}frames/${r.id}/splash.${ext(r)}`, scale: Math.round((+r.scale || 1.2) * 100) })).concat(LOCAL_FRAME_MEDIA);
-  if (wr) PICK.wrapper.items = wr.filter((r) => r.id).map((r) => ({ label: r.name || r.id, url: `${MB}wrappers/${r.id}/splash.${ext(r)}` }));
-  if (bn) PICK.banner.items = bn.filter((r) => r.src).map((r) => ({ label: r.name || r.identification, url: r.src, thumb: r.thumb || r.src }));
-  if (!(fr && wr && bn)) {
-    Object.entries({ frame: fr, wrapper: wr, banner: bn }).forEach(([k, v]) => { if (!v) PICK[k].items = PRESET_MEDIA[k].map((p) => ({ label: p.label, url: p.value })); });
+  if (SHARED_MEDIA.length) { PICK.wrapper.items = SHARED_MEDIA; PICK.banner.items = SHARED_MEDIA; }
+  if (!(fr && wr && bn && np)) {
+    if (!fr) PICK.frame.items = PRESET_MEDIA.frame.map((p) => ({ label: p.label, url: p.value }));
+    if (!SHARED_MEDIA.length) {
+      SHARED_MEDIA = dedupeMedia([...PRESET_MEDIA.wrapper, ...PRESET_MEDIA.banner].map((p) => ({ label: p.label, url: p.value, thumb: p.value, kind: "preset" })));
+      PICK.wrapper.items = SHARED_MEDIA; PICK.banner.items = SHARED_MEDIA; NP_CATALOG = SHARED_MEDIA;
+    }
     $("catNote").textContent = "Couldn't read ../../json - showing a short built-in list. Open this page from system/pages/profile-testing/ to get every library item.";
   }
   renderAllPicks();
   renderPublicFriends();
 }
-document.querySelectorAll(".pfilter").forEach((el) => el.addEventListener("input", () => renderPick(el.dataset.for)));
+document.querySelectorAll(".pfilter").forEach((el) => el.addEventListener("input", () => (el.dataset.for === "nameplate" ? renderNpPick() : renderPick(el.dataset.for))));
 ["pimg","pframe","pwrapper","bimgMedia","npImg","cbImg"].forEach((id) => $(id)?.addEventListener("input", renderAllPicks));
 populatePresets();
 loadCatalogs();
@@ -1384,7 +1453,7 @@ loadAchievements();
 const PANE_TITLES = {
   nameplate: "Nameplate", avatar: "Avatar", frame: "Avatar frame", banner: "Banner & divider",
   border: "Card border", wrapper: "Card wrapper", effects: "Profile effect", bubble: "Status bubble",
-  name: "Display name style", achievements: "Achievements", activity: "Activity", share: "Share or reset"
+  name: "Display name style", text: "Bio & date style", achievements: "Achievements", activity: "Activity", share: "Share or reset"
 };
 let openPaneId = "", paneOpener = null;
 function showPane(id, opener) {
@@ -1612,11 +1681,12 @@ function applyNameplate(plate, s) {
   plate.dataset.anim = ["sheen", "drift", "pulse", "hue"].includes(s.npAnim) ? s.npAnim : "none";
   return true;
 }
+// The nameplate is a global-chat decoration. It is previewed in the editor
+// (sidebar tile + nameplate pane) and never drawn on the profile card itself.
 function paintNameplate() {
-  const on = applyNameplate($("nameplate"), S);
-  document.querySelector(".profile-identity").dataset.np = on ? "on" : "off";
-  const miniOn = applyNameplate($("tileNpPlate"), S);
-  $("tileNp").dataset.empty = String(!miniOn);
+  [["tileNpPlate", "tileNp"], ["paneNpPlate", "paneNp"]].forEach(([plate, box]) => {
+    $(box).dataset.empty = String(!applyNameplate($(plate), S));
+  });
 }
 function renderNpPick() {
   const box = $("pickNameplate"); if (!box) return;
@@ -1638,8 +1708,9 @@ function renderNpPick() {
     sw.style.background = preset.bg; if (preset.size) sw.style.backgroundSize = preset.size;
     b.append(sw);
   }, () => { S.npKind = "preset"; S.npId = preset.id; S.npImg = ""; $("npImg").value = ""; $("npImg").placeholder = "blank = use the style above"; save(); paint(); renderNpPick(); }));
-  NP_CATALOG.forEach((item) => tile(item.label, !none && img === item.url, (b) => {
-    const im = document.createElement("img"); im.loading = "lazy"; im.alt = item.label; im.src = item.url;
+  const npQuery = (document.querySelector('.pfilter[data-for="nameplate"]')?.value || "").trim().toLowerCase();
+  NP_CATALOG.filter((item) => !npQuery || item.label.toLowerCase().includes(npQuery)).forEach((item) => tile(item.label, !none && img === item.url, (b) => {
+    const im = document.createElement("img"); im.loading = "lazy"; im.alt = item.label; im.src = item.thumb || item.url;
     b.append(im);
   }, () => { S.npKind = "image"; S.npImg = item.url; $("npImg").value = item.url; save(); paint(); renderNpPick(); }));
 }
@@ -1680,6 +1751,15 @@ function paintTiles() {
   $("tileName").style.cssText = nameCss;
   $("tileNpName").textContent = displayName;
   $("tileNpName").style.cssText = nameCss;
+  $("paneNpAvatar").style.backgroundImage = pic;
+  $("paneNpFrame").style.cssText = nameplateFrame.style.cssText;
+  $("paneNpFrame").className = nameplateFrame.className;
+  $("paneNpName").textContent = displayName;
+  $("paneNpName").style.cssText = nameCss;
+  $("tileBioText").textContent = (S.bioText || "").trim().split("\n")[0] || "Your bio";
+  $("tileSinceText").textContent = `Member since ${$("memberSince").textContent || "…"}`;
+  paintTextStyle($("tileBioText"), "bio");
+  paintTextStyle($("tileSinceText"), "since");
   const badges = $("tileAch");
   badges.replaceChildren();
   const shown = S.ach.filter(hasAch).slice(0, 5).map((id) => ACH.find((a) => a.id === id)).filter(Boolean);
@@ -1998,6 +2078,7 @@ $("actShow").addEventListener("change", renderActivity);
   if (!since) { since = new Date().toISOString(); try { localStorage.setItem("ws_profile_test_since", since); } catch (_) {} }
   const date = new Date(since);
   $("memberSince").textContent = Number.isNaN(date.getTime()) ? "" : date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  paint();   // the Bio & Date tile mirrors this text
 })();
 renderActivity();
 if (!PUBLIC_PROFILE && readRecent().length) ensureLibrary();

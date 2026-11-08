@@ -104,6 +104,7 @@ input[type="text"]:focus, textarea:focus { border-color: var(--accent-color, #f4
 .user-dock > * { position: relative; z-index: 1; }
 .user-dock:hover::before { filter: brightness(1.2); }
 .user-dock:focus-visible { outline: 2px solid var(--accent-color,#f44); outline-offset: -3px; }
+.user-dock:not([data-plate="on"])::before { background: linear-gradient(115deg,rgba(255,255,255,0.04),rgba(255,255,255,0.1)); background-size: cover; background-repeat: no-repeat; opacity: 1; }
 .user-dock #meName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .user-dock .who b { display: flex; align-items: center; gap: 7px; }
 .user-dock .ws-bot-shield { flex: none; }
@@ -164,6 +165,9 @@ div.conv-row { cursor: default; }
 .grp.me .stack { align-items: flex-end; }
 .grp .by { font-size: 0.7rem; opacity: 0.75; margin: 0 6px; }
 .grp .by b { font-size: 0.78rem; }
+.grp .by.has-plate { opacity: 1; }
+.ws-plated { position: relative; isolation: isolate; display: inline-block; padding: 1px 9px; border-radius: 7px; }
+.ws-plated::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: var(--plate); background-size: var(--plate-size,cover); background-repeat: var(--plate-repeat,no-repeat); background-position: center; opacity: var(--plate-opacity,1); }
 .bubble { padding: 7px 12px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.45; font-size: 0.88rem; border: 2px solid rgba(255,255,255,0.18); max-width: 100%; }
 .them .bubble { background: rgba(255,255,255,0.09); border-radius: 16px 16px 16px 4px; }
 .them .bubble + .bubble { border-radius: 4px 16px 16px 4px; }
@@ -317,6 +321,6 @@ body.profile-modal-open { overflow: hidden; backdrop-filter: none; -webkit-backd
 <script src="../../js/cursors.js"></script>
 <script src="../../js/msgcore.js?v=2.4.0-public-profiles"></script>
 <script src="../../js/profile-modal.js?v=account-role-shields"></script>
-<script src="../../js/chat.js?v=account-role-shields"></script>
+<script src="../../js/chat.js?v=global-nameplates-bio-styles"></script>
 </body>
 </html>

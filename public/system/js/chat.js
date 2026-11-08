@@ -304,6 +304,7 @@
     state.rev = "";
     state.lastPing = 0;
     closeUserMenu();
+    paintDockPlate();
     $("chat").classList.add("open");
     if (M) M.setViewing(name === GLOBAL ? "" : name);
     renderFriends();
@@ -316,6 +317,7 @@
     closeUserMenu();
     state.active = "";
     state.rev = "";
+    paintDockPlate();
     if (M) M.setViewing("");
     $("chat").classList.remove("open");
     renderFriends();
@@ -416,6 +418,130 @@
     t.style.height = Math.min(120, t.scrollHeight) + "px";
   }
 
+  // ── nameplates ────────────────────────────────────────────────────────
+  // A nameplate is a profile style (npKind / npId / npImg / npFit / npOpacity /
+  // npDim) drawn behind a name. It decorates the signed-in user's dock and
+  // every sender name in GLOBAL chat; never the profile card.
+  // Other people's plates come from their published public profile
+  // (GET ?type=publicprofile&username=), fetched lazily and cached.
+  const PLATE_PRESETS = {
+    ember: "linear-gradient(100deg,#5a1209,#d6401f 40%,#ffb347 65%,#5a1209)",
+    aurora: "linear-gradient(100deg,#0f2027,#2c7a7b 28%,#6b5bd6 55%,#d65bb0 80%,#0f2027)",
+    candy: "linear-gradient(100deg,#ff6ec7,#ffd36e 50%,#6ee7ff)",
+    ocean: "repeating-linear-gradient(115deg,#082a4d 0 14px,#0b3d6e 14px 28px)",
+    scan: "repeating-linear-gradient(0deg,rgba(255,255,255,.07) 0 1px,transparent 1px 3px),linear-gradient(100deg,#101820,#2b3a4a)",
+    halftone: "radial-gradient(circle,rgba(255,255,255,.24) 1.5px,transparent 2px) 0 0/10px 10px,linear-gradient(100deg,#3a1c71,#d76d77)",
+  };
+  const PLATE_DEFAULT = "linear-gradient(115deg,rgba(255,255,255,.04),rgba(255,255,255,.1))";
+  const PLATE_TTL = 5 * 60000;       // how long a fetched plate is reused
+  const PLATE_RETRY = 3 * 60000;     // wait before asking again after a failed/missing profile
+  const PLATE_PARALLEL = 3;          // public-profile requests in flight at once
+  const plates = Object.create(null); // name -> { plate, at, ok, busy }
+  const plateQueue = [];
+  let plateActive = 0;
+
+  function readOwnProfile() {
+    try {
+      const saved = JSON.parse(read("ws_profile_style_main") || "{}");
+      if (saved && typeof saved === "object" && !Array.isArray(saved)) return saved;
+    } catch (error) {
+      console.error("Could not read the saved nameplate profile.", error);
+    }
+    return {};
+  }
+  function safePlateImage(value) {
+    const image = String(value || "").trim();
+    if (/^data:image\/(?:png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/i.test(image)) return image;
+    try {
+      const parsed = new URL(image);
+      if (parsed.protocol === "https:") return parsed.href;
+    } catch (_) {}
+    return "";
+  }
+  // Only the np* fields are read, and each is checked: profiles are other people's data.
+  function sanitizePlate(profile) {
+    if (!profile || typeof profile !== "object" || Array.isArray(profile)) return null;
+    if (String(profile.npKind || "none") === "none") return null;
+    const num = (v, lo, hi, d) => { const n = Number(v); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, n)) : d; };
+    return {
+      image: safePlateImage(profile.npImg),
+      preset: Object.prototype.hasOwnProperty.call(PLATE_PRESETS, profile.npId) ? profile.npId : "ember",
+      fit: ["cover", "stretch", "tile"].includes(profile.npFit) ? profile.npFit : "cover",
+      opacity: num(profile.npOpacity, 10, 100, 100) / 100,
+      dim: num(profile.npDim, 0, 80, 30) / 100,
+    };
+  }
+  function plateLook(plate) {
+    if (!plate) return { background: PLATE_DEFAULT, size: "cover", repeat: "no-repeat", opacity: "1" };
+    const base = plate.image ? `url("${plate.image}")` : PLATE_PRESETS[plate.preset];
+    return {
+      background: `linear-gradient(90deg,rgba(0,0,0,${plate.dim}),rgba(0,0,0,${plate.dim * 0.45})),${base}`,
+      size: plate.image ? (plate.fit === "stretch" ? "100% 100%" : plate.fit === "tile" ? "auto 100%" : "cover") : "cover",
+      repeat: plate.image && plate.fit === "tile" ? "repeat-x" : "no-repeat",
+      opacity: String(plate.opacity),
+    };
+  }
+  function plateFor(name) {
+    const n = cleanName(name);
+    if (n && n === state.me) return sanitizePlate(readOwnProfile());
+    return plates[n] ? plates[n].plate : null;
+  }
+  function setPlate(node, plate) {
+    const by = node.closest(".by");
+    const vars = ["--plate", "--plate-size", "--plate-repeat", "--plate-opacity"];
+    if (!plate) {
+      node.classList.remove("ws-plated");
+      vars.forEach((v) => node.style.removeProperty(v));
+      if (by) by.classList.remove("has-plate");
+      return;
+    }
+    const look = plateLook(plate);
+    node.classList.add("ws-plated");
+    node.style.setProperty("--plate", look.background);
+    node.style.setProperty("--plate-size", look.size);
+    node.style.setProperty("--plate-repeat", look.repeat);
+    node.style.setProperty("--plate-opacity", look.opacity);
+    if (by) by.classList.add("has-plate");
+  }
+  // Global chat only: DMs and every other view show plain names.
+  function paintPlates() {
+    const global = inGlobal();
+    document.querySelectorAll("#thread .grp .by [data-ws-name]").forEach((node) => {
+      setPlate(node, global ? plateFor(node.dataset.wsName) : null);
+    });
+  }
+  function wantPlate(name) {
+    const n = cleanName(name);
+    if (!API || !NAME_RE.test(n) || n === state.me) return;
+    const e = plates[n];
+    if (e && (e.busy || Date.now() - e.at < (e.ok ? PLATE_TTL : PLATE_RETRY))) return;
+    plates[n] = { plate: e ? e.plate : null, at: e ? e.at : 0, ok: e ? e.ok : true, busy: true };
+    plateQueue.push(n);
+    pumpPlates();
+  }
+  function pumpPlates() {
+    while (plateActive < PLATE_PARALLEL && plateQueue.length) {
+      const n = plateQueue.shift();
+      plateActive++;
+      loadPlate(n).finally(() => { plateActive--; pumpPlates(); });
+    }
+  }
+  async function loadPlate(n) {
+    const prev = plates[n] || {};
+    try {
+      const url = new URL(API);
+      url.search = new URLSearchParams({ type: "publicprofile", username: n }).toString();
+      const res = await fetch(url, { cache: "no-store" });
+      const data = await res.json();
+      if (!res.ok || !data || data.ok !== true || !data.profile || typeof data.profile !== "object" || Array.isArray(data.profile)) throw new Error("no public profile");
+      plates[n] = { plate: sanitizePlate(data.profile), at: Date.now(), ok: true, busy: false };
+    } catch (_) {
+      // Not published (or the Worker is busy): keep any older plate, retry later.
+      plates[n] = { plate: prev.plate || null, at: Date.now(), ok: false, busy: false };
+    }
+    paintPlates();
+  }
+
   // ── rendering ─────────────────────────────────────────────────────────
   function paintMe() {
     if (!state.me) return;
@@ -425,13 +551,7 @@
       holder.textContent = "";
       holder.append(avatar(state.me));
     }
-    let profile = {};
-    try {
-      const saved = JSON.parse(read("ws_profile_style_main") || "{}");
-      if (saved && typeof saved === "object" && !Array.isArray(saved)) profile = saved;
-    } catch (error) {
-      console.error("Could not read the saved nameplate profile.", error);
-    }
+    const profile = readOwnProfile();
     const name = $("meName");
     name.textContent = (typeof profile.nm === "string" ? profile.nm : "").trim() || shown(state.me);
     const fonts = new Set([
@@ -453,41 +573,20 @@
       if (shield) shield.hidden = !isRoleAccount(state.me, role);
     });
     if (dock) {
-      const presetPlates = {
-        ember: "linear-gradient(100deg,#5a1209,#d6401f 40%,#ffb347 65%,#5a1209)",
-        aurora: "linear-gradient(100deg,#0f2027,#2c7a7b 28%,#6b5bd6 55%,#d65bb0 80%,#0f2027)",
-        candy: "linear-gradient(100deg,#ff6ec7,#ffd36e 50%,#6ee7ff)",
-        ocean: "repeating-linear-gradient(115deg,#082a4d 0 14px,#0b3d6e 14px 28px)",
-        scan: "repeating-linear-gradient(0deg,rgba(255,255,255,.07) 0 1px,transparent 1px 3px),linear-gradient(100deg,#101820,#2b3a4a)",
-        halftone: "radial-gradient(circle,rgba(255,255,255,.24) 1.5px,transparent 2px) 0 0/10px 10px,linear-gradient(100deg,#3a1c71,#d76d77)",
-      };
-      const kind = String(profile.npKind || "none");
-      const image = String(profile.npImg || "").trim();
-      let safeImage = "";
-      if (/^data:image\/(?:png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/i.test(image)) safeImage = image;
-      else {
-        try {
-          const parsed = new URL(image);
-          if (parsed.protocol === "https:") safeImage = parsed.href;
-        } catch (_) {}
-      }
-      let background = "linear-gradient(115deg,rgba(255,255,255,.04),rgba(255,255,255,.1))";
-      dock.style.setProperty("--dock-plate-size", "cover");
-      dock.style.setProperty("--dock-plate-repeat", "no-repeat");
-      if (kind !== "none") {
-        if (safeImage) {
-          background = `url("${safeImage}")`;
-          const fit = profile.npFit;
-          dock.style.setProperty("--dock-plate-size", fit === "stretch" ? "100% 100%" : fit === "tile" ? "auto 100%" : "cover");
-          dock.style.setProperty("--dock-plate-repeat", fit === "tile" ? "repeat-x" : "no-repeat");
-        } else background = presetPlates[profile.npId] || presetPlates.ember;
-        const dim = Math.max(0, Math.min(0.8, (Number(profile.npDim) || 0) / 100));
-        background = `linear-gradient(90deg,rgba(0,0,0,${dim}),rgba(0,0,0,${dim * 0.45})),${background}`;
-      }
-      dock.style.setProperty("--dock-plate", background);
-      dock.style.setProperty("--dock-opacity", kind === "none" ? "1" : String(Math.max(0.1, Math.min(1, (Number(profile.npOpacity) || 100) / 100))));
+      const look = plateLook(sanitizePlate(profile));
+      dock.style.setProperty("--dock-plate", look.background);
+      dock.style.setProperty("--dock-plate-size", look.size);
+      dock.style.setProperty("--dock-plate-repeat", look.repeat);
+      dock.style.setProperty("--dock-opacity", look.opacity);
     }
+    paintDockPlate();
+    paintPlates();
     $("meUser").textContent = "@" + state.me;
+  }
+  // The nameplate only decorates the user's own display while Global chat is open.
+  function paintDockPlate() {
+    const dock = $("userNameplate");
+    if (dock) dock.dataset.plate = inGlobal() ? "on" : "off";
   }
 
   const fmtTime = (ts) => new Date(ts).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
@@ -641,6 +740,8 @@
       stack.append(el("div", { class: "bubble" + (m.pending ? " pending" : ""), title: m.pending ? "" : fmtTime(m.ts), text: m.text }));
       prev = m;
     }
+    if (inGlobal()) new Set(state.messages.map((m) => m.from)).forEach(wantPlate);
+    paintPlates();
     if (forceBottom || nearBottom) box.scrollTop = box.scrollHeight;
   }
 

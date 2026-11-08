@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.9.0/cdn/themes/dark.css" />
 <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.9.0/cdn/shoelace-autoloader.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css" />
-<link rel="stylesheet" href="profile-testing.css?v=account-role-shields">
+<link rel="stylesheet" href="profile-testing.css?v=modal-no-white-shell">
 </head>
 <body>
 <div id="profileEditor">
@@ -62,6 +62,11 @@
   </div>
 
   <div class="edit-group">
+   <span class="edit-label">Bio &amp; Date Style</span>
+   <button type="button" class="edit-tile wide" data-open="text" aria-label="Edit bio and member-since style"><span class="tile-textpair"><span id="tileBioText"></span><span id="tileSinceText"></span></span></button>
+  </div>
+
+  <div class="edit-group">
    <span class="edit-label">Achievements</span>
    <button type="button" class="edit-tile wide" data-open="achievements" aria-label="Edit achievements"><span class="tile-badges" id="tileAch"></span></button>
   </div>
@@ -78,8 +83,9 @@
   <div class="pane-head"><button type="button" class="mini pane-back" id="paneBack" aria-label="Back to profile sections">‹ Back</button><h1 id="paneTitle"></h1></div>
 
   <section class="edit-pane" id="pane-nameplate" hidden>
-   <p class="panel-intro">A plate drawn behind your display name. Pick a built-in style, a library image, or use your own.</p>
-   <div class="picker"><div class="grid" id="pickNameplate"></div></div>
+   <p class="panel-intro">A plate drawn behind your name in global chat. It never changes your profile card. Pick a built-in style, a library image, or use your own.</p>
+   <div class="pane-np-preview"><span class="np-mini" id="paneNp"><span class="nameplate" id="paneNpPlate"><i class="np-layer"></i><i class="np-scrim"></i></span><span class="np-avatar-wrap"><span class="np-av" id="paneNpAvatar"></span><span class="np-frame" id="paneNpFrame" aria-hidden="true"></span></span><span class="np-name" id="paneNpName"></span></span></div>
+   <div class="picker"><input type="text" class="pfilter" data-for="nameplate" placeholder="search library..."><div class="grid" id="pickNameplate"></div></div>
    <label><span>Image URL</span><input type="text" id="npImg" placeholder="blank = use the style above"></label>
    <div class="media-strip">
     <button type="button" class="mini" id="importNpBtn">Import image</button>
@@ -205,6 +211,28 @@
    <label><span>Bold / italic</span><span class="row" style="flex:1"><label style="margin:0"><input type="checkbox" id="nb"> B</label><label style="margin:0"><input type="checkbox" id="ni"> I</label></span></label>
   </section>
 
+  <section class="edit-pane" id="pane-text" hidden>
+   <p class="panel-intro">By default your bio and member-since date use your display name style. Switch one to Custom to style it on its own.</p>
+   <h2>Bio</h2>
+   <label><span>Style</span><select id="bioStyle"><option value="inherit">Match display name</option><option value="custom">Custom</option></select></label>
+   <div id="bioCustom" hidden>
+    <label><span>Font</span><select id="bioFont" class="font-copy"></select></label>
+    <label><span>Size</span><input type="range" id="bioSize" min="10" max="28"></label>
+    <label><span>Colour</span><input type="color" id="bioColor"></label>
+    <label><span>Outline</span><input type="range" id="bioOutline" min="0" max="3"></label>
+    <label><span>Bold / italic</span><span class="row" style="flex:1"><label style="margin:0"><input type="checkbox" id="bioBold"> B</label><label style="margin:0"><input type="checkbox" id="bioItalic"> I</label></span></label>
+   </div>
+   <h2>Member since</h2>
+   <label><span>Style</span><select id="sinceStyle"><option value="inherit">Match display name</option><option value="custom">Custom</option></select></label>
+   <div id="sinceCustom" hidden>
+    <label><span>Font</span><select id="sinceFont" class="font-copy"></select></label>
+    <label><span>Size</span><input type="range" id="sinceSize" min="10" max="28"></label>
+    <label><span>Colour</span><input type="color" id="sinceColor"></label>
+    <label><span>Outline</span><input type="range" id="sinceOutline" min="0" max="3"></label>
+    <label><span>Bold / italic</span><span class="row" style="flex:1"><label style="margin:0"><input type="checkbox" id="sinceBold"> B</label><label style="margin:0"><input type="checkbox" id="sinceItalic"> I</label></span></label>
+   </div>
+  </section>
+
   <section class="edit-pane" id="pane-achievements" hidden>
    <p class="section-note">Choose up to five earned badges to show on the card. Turn on preview to test unearned ones.</p>
    <div id="achList"></div>
@@ -279,8 +307,7 @@
    <button type="button" class="profile-action profile-full" id="viewFullProfile">View full profile</button>
   </div>
   <div id="body">
-   <div class="profile-identity" data-np="off">
-    <div class="nameplate" id="nameplate" aria-hidden="true"><i class="np-layer"></i><i class="np-scrim"></i></div>
+   <div class="profile-identity">
     <div class="profile-name-row">
      <h2 id="name"></h2>
     </div>
@@ -341,6 +368,6 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
-<script src="../../js/profile-testing.js?v=account-role-shields"></script>
+<script src="../../js/profile-testing.js?v=shared-media-bio-style"></script>
 </body>
 </html>
