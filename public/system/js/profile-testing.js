@@ -43,7 +43,7 @@ const PRESET_MEDIA = {
 const DEF = {layoutVersion:2,divStyle:"none",divFill:"color",divColor:"#ff4444",divSize:4,bw:1,bc1:"#383a40",bc2:"#383a40",ba:135,bh:210,r:12,bimg:"",roles:["Community Member","Creative"],bioText:"",
   ach:[],achDemo:false,qText:"your status here",qSize:16,qColor:"#ffffff",qx:20,qy:19,qPositioned:false,qPositionVersion:1,
   fx_t:"none",fx_n:60,nm:"",nf:"system-ui,sans-serif",ns:24,nc:"#f2f3f5",no:0,nb:true,ni:false,statusMode:"green",
-  pimg:"",pimgRemoved:false,pframe:"",pframeScale:120,pframeX:0,pframeY:0,pwrapper:"",pwrapperMode:"image",pwrapperColor:"#383a40",pwrapperOpacity:100,pfpRadius:50,pfpSize:116,pfpAlign:"center",pfpBorderSize:4,pfpBorderMode:"default",pfpBorderColor:"#383a40",bimgMedia:"",bannerTint:"#ff4444",pixelate:0,
+  pimg:"",pimgRemoved:false,pframe:"",pframeScale:120,pframeX:0,pframeY:0,pwrapper:"",pwrapperMode:"image",pwrapperColor:"#383a40",pwrapperOpacity:100,pfpRadius:50,pfpSize:116,pfpAlign:"center",pfpBorderSize:4,pfpBorderMode:"default",pfpBorderColor:"#383a40",bimgMedia:"",bannerTint:"#ff4444",bannerOpacity:100,pixelate:0,
   npKind:"none",npId:"ember",npImg:"",npFit:"cover",npOpacity:100,npDim:30,npAnim:"none",npDur:8,
   cbType:"gradient",cbImg:"",cbAnim:"none",cbDur:6,cbSlice:30,cbRepeat:"stretch",actShow:true,
   bioStyle:"inherit",bioFont:"system-ui,sans-serif",bioSize:13,bioColor:"#f2f3f5",bioOutline:0,bioBold:false,bioItalic:false,
@@ -355,9 +355,9 @@ function populatePresets() {
 
 // Bio / date font pickers offer exactly the same fonts as the display name.
 document.querySelectorAll("select.font-copy").forEach((sel) => { sel.innerHTML = $("nf").innerHTML; });
-const SIMPLE = ["bioStyle","bioAlign","bioFont","bioSize","bioColor","bioOutline","sinceStyle","sinceAlign","sinceFont","sinceSize","sinceColor","sinceOutline","divStyle","divFill","divColor","divSize","bw","bc1","bc2","ba","bh","r","qText","qSize","qColor","fx_t","fx_n","nm","nf","ns","nc","no","pimg","pframe","pframeScale","pframeX","pframeY","pwrapper","pwrapperMode","pwrapperColor","pwrapperOpacity","pfpSize","pfpBorderSize","pfpBorderMode","pfpBorderColor","bimgMedia","bannerTint","pfpRadius","pixelate","statusMode","npImg","npFit","npOpacity","npDim","npAnim","npDur","cbType","cbImg","cbAnim","cbDur","cbSlice","cbRepeat"];
+const SIMPLE = ["bioStyle","bioAlign","bioFont","bioSize","bioColor","bioOutline","sinceStyle","sinceAlign","sinceFont","sinceSize","sinceColor","sinceOutline","divStyle","divFill","divColor","divSize","bw","bc1","bc2","ba","bh","r","qText","qSize","qColor","fx_t","fx_n","nm","nf","ns","nc","no","pimg","pframe","pframeScale","pframeX","pframeY","pwrapper","pwrapperMode","pwrapperColor","pwrapperOpacity","pfpSize","pfpBorderSize","pfpBorderMode","pfpBorderColor","bimgMedia","bannerTint","bannerOpacity","pfpRadius","pixelate","statusMode","npImg","npFit","npOpacity","npDim","npAnim","npDur","cbType","cbImg","cbAnim","cbDur","cbSlice","cbRepeat"];
 const DATA_FIELDS = ["pframe","npImg","cbImg"];   // may hold an imported data: image; never dumped into the URL box
-const rangeUnits = { bh:"px", bw:"px", divSize:"px", fx_n:"", ns:"px", no:"px", pfpSize:"px", pfpRadius:"%", pfpBorderSize:"px", pframeScale:"%", pframeX:"px", pframeY:"px", pwrapperOpacity:"%", pixelate:"", qSize:"px", r:"px", npOpacity:"%", npDim:"%", npDur:"s", cbDur:"s", cbSlice:"px", bioSize:"px", bioOutline:"px", sinceSize:"px", sinceOutline:"px" };
+const rangeUnits = { bh:"px", bw:"px", divSize:"px", fx_n:"", ns:"px", no:"px", pfpSize:"px", pfpRadius:"%", pfpBorderSize:"px", pframeScale:"%", pframeX:"px", pframeY:"px", pwrapperOpacity:"%", bannerOpacity:"%", pixelate:"", qSize:"px", r:"px", npOpacity:"%", npDim:"%", npDur:"s", cbDur:"s", cbSlice:"px", bioSize:"px", bioOutline:"px", sinceSize:"px", sinceOutline:"px" };
 function showRangeValue(input) {
   const output = input.nextElementSibling;
   const min = Number(input.min) || 0;
@@ -692,11 +692,10 @@ function paint() {
   const bannerHeight = Number(S.bh);
   banner.style.height = `${bannerHeight}px`;
   st.setProperty("--profile-banner-height", `${bannerHeight}px`);
-  banner.style.backgroundImage = bannerUrl.trim() ? `url("${escapeCssUrl(bannerUrl.trim())}")` : "none";
-  banner.style.backgroundColor = bannerUrl.trim() ? "transparent" : (S.bannerTint || S.divColor || "#ff4444");
-  banner.style.backgroundSize = bannerUrl.trim() ? "cover" : "";
-  banner.style.backgroundPosition = bannerUrl.trim() ? "center" : "";
-  banner.style.backgroundRepeat = bannerUrl.trim() ? "no-repeat" : "";
+  banner.style.setProperty("--profile-banner-image", bannerUrl.trim() ? `url("${escapeCssUrl(bannerUrl.trim())}")` : "none");
+  banner.style.setProperty("--profile-banner-opacity", String(Math.max(0, Math.min(100, Number(S.bannerOpacity) || 0)) / 100));
+  banner.style.backgroundImage = "none";
+  banner.style.backgroundColor = S.bannerTint || S.divColor || "#ff4444";
   const useBannerMask = S.divFill === "mask" && ["line", "jagged", "drip", "wave"].includes(S.divStyle);
   const tint = $("bannerTintLayer");
   tint.style.backgroundColor = S.bannerTint || S.divColor;
@@ -717,13 +716,11 @@ function paint() {
   const wrapper = $("wrapper");
   const wrapperUrl = (S.pwrapper || "").trim();
   const wrapperUsesImage = S.pwrapperMode !== "color";
-  wrapper.style.backgroundColor = wrapperUsesImage ? "transparent" : S.pwrapperColor;
-  wrapper.style.backgroundImage = wrapperUsesImage && wrapperUrl ? `url("${escapeCssUrl(wrapperUrl)}")` : "";
-  wrapper.style.backgroundSize = "100% 100%";
-  wrapper.style.backgroundPosition = "center";
-  wrapper.style.backgroundRepeat = "no-repeat";
-  wrapper.style.opacity = String((Number(S.pwrapperOpacity) || 0) / 100);
-  $("wrapperColorControl").hidden = wrapperUsesImage;
+  wrapper.style.setProperty("--pf-wrapper-color", S.pwrapperColor || "#383a40");
+  wrapper.style.setProperty("--pf-wrapper-image", wrapperUsesImage && wrapperUrl ? `url("${escapeCssUrl(wrapperUrl)}")` : "none");
+  wrapper.style.setProperty("--pf-wrapper-image-opacity", String(Math.max(0, Math.min(100, Number(S.pwrapperOpacity) || 0)) / 100));
+  wrapper.style.backgroundImage = "none";
+  $("wrapperColorControl").hidden = false;
   $("wrapperImageControls").hidden = !wrapperUsesImage;
   $("divFillControl").hidden = !["line", "jagged", "drip", "wave"].includes(S.divStyle);
   $("divColorControl").hidden = !["line", "jagged", "drip", "wave"].includes(S.divStyle) || useBannerMask;
@@ -733,7 +730,6 @@ function paint() {
   const bannerMask = $("bannerMaskExtension");
   if (useBannerMask) {
     const maskHeight = S.divStyle === "line" ? Math.max(1, Number(S.divSize)) : Math.max(6, Number(S.divSize) * 2);
-    const bannerStyle = getComputedStyle(banner);
     const imageMask = S.divStyle === "drip";
     const paintMaskSize = Number(S.divSize) * 4;
     const coverSize = bannerUrl.trim()
@@ -742,15 +738,14 @@ function paint() {
     const maskImage = imageMask ? `url("${DIVIDER_ASSETS.drip}")` : svgFor(S.divStyle, "#fff");
     bannerMask.style.display = "block";
     bannerMask.style.height = `${imageMask ? paintMaskSize : banner.offsetHeight}px`;
-    bannerMask.style.backgroundColor = "#383a40";
-    bannerMask.style.backgroundImage = bannerStyle.backgroundImage;
-    bannerMask.style.backgroundSize = coverSize
+    bannerMask.style.backgroundColor = S.bannerTint || S.divColor || "#ff4444";
+    bannerMask.style.setProperty("--banner-mask-image", bannerUrl.trim() ? `url("${escapeCssUrl(bannerUrl.trim())}")` : "none");
+    bannerMask.style.setProperty("--banner-mask-size", coverSize
       ? `${coverSize.width}px ${coverSize.height}px`
-      : bannerStyle.backgroundSize;
-    bannerMask.style.backgroundPosition = coverSize
+      : "cover");
+    bannerMask.style.setProperty("--banner-mask-position", coverSize
       ? `${(banner.clientWidth - coverSize.width) / 2}px ${((banner.offsetHeight - coverSize.height) / 2) - banner.offsetHeight}px`
-      : `50% calc(50% - ${(banner.offsetHeight + (imageMask ? paintMaskSize : banner.offsetHeight)) / 2}px)`;
-    bannerMask.style.backgroundRepeat = bannerStyle.backgroundRepeat;
+      : `50% calc(50% - ${(banner.offsetHeight + (imageMask ? paintMaskSize : banner.offsetHeight)) / 2}px)`);
     bannerMask.style.maskImage = maskImage;
     bannerMask.style.maskSize = imageMask ? `${paintMaskSize * 3}px ${paintMaskSize}px` : `${maskHeight * 3.33}px ${maskHeight}px`;
     bannerMask.style.maskPosition = "left top";
@@ -762,9 +757,9 @@ function paint() {
   } else {
     bannerMask.style.display = "none";
     bannerMask.style.backgroundColor = "transparent";
-    bannerMask.style.backgroundImage = "none";
-    bannerMask.style.backgroundSize = "";
-    bannerMask.style.backgroundPosition = "";
+    bannerMask.style.setProperty("--banner-mask-image", "none");
+    bannerMask.style.removeProperty("--banner-mask-size");
+    bannerMask.style.removeProperty("--banner-mask-position");
     bannerMask.style.maskImage = "none";
     bannerMask.style.webkitMaskImage = "none";
   }
@@ -1789,14 +1784,18 @@ function paintTiles() {
   nameplateFrame.style.transform = `translate(-50%,-50%) translate(${(Number(S.pframeX) || 0) * nameplateOffsetScale}px,${(Number(S.pframeY) || 0) * nameplateOffsetScale}px)`;
   $("tileFrame").style.backgroundImage = frameUrl ? `url("${escapeCssUrl(frameUrl)}")` : "none";
   $("tilePlus").hidden = !!frameUrl;
-  const banner = $("banner"), tb = $("tileBanner");
-  tb.style.backgroundImage = banner.style.backgroundImage || "none";
-  tb.style.backgroundSize = banner.style.backgroundSize || "cover";
+  const tb = $("tileBanner");
+  const bannerUrl = S.bimg || S.bimgMedia || "";
+  tb.style.setProperty("--tile-banner-color", S.bannerTint || S.divColor || "#ff4444");
+  tb.style.setProperty("--tile-banner-image", bannerUrl.trim() ? `url("${escapeCssUrl(bannerUrl.trim())}")` : "none");
+  tb.style.setProperty("--tile-banner-image-opacity", String(Math.max(0, Math.min(100, Number(S.bannerOpacity) || 0)) / 100));
   const wrapper = $("wrapper"), tw = $("tileWrapper");
-  tw.style.backgroundColor = wrapper.style.backgroundColor || "";
-  tw.style.backgroundImage = wrapper.style.backgroundImage || "none";
-  tw.style.opacity = String(Math.max(0.35, Number(S.pwrapperOpacity) / 100 || 0));
-  $("tileWrapperPlus").hidden = (S.pwrapperMode === "color") || (!!wrapper.style.backgroundImage && wrapper.style.backgroundImage !== "none");
+  const wrapperUrl = (S.pwrapper || "").trim();
+  const wrapperUsesImage = S.pwrapperMode !== "color";
+  tw.style.setProperty("--tile-wrapper-color", S.pwrapperColor || "#26282d");
+  tw.style.setProperty("--tile-wrapper-image", wrapperUsesImage && wrapperUrl ? `url("${escapeCssUrl(wrapperUrl)}")` : "none");
+  tw.style.setProperty("--tile-wrapper-image-opacity", String(Math.max(0, Math.min(100, Number(S.pwrapperOpacity) || 0)) / 100));
+  $("tileWrapperPlus").hidden = !wrapperUsesImage || !wrapperUrl;
   $("tileFx").textContent = ({ none: "No effect", snow: "Snow", rain: "Rain", embers: "Embers", stars: "Stars" })[S.fx_t] || "No effect";
   $("tileBubble").textContent = S.qText || "No bubble";
   const displayName = S.nm || (PUBLIC_PROFILE ? publicProfileName :

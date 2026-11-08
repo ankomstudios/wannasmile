@@ -42,7 +42,7 @@
   const state = {
     me: "", friends: [], active: "", messages: [], rev: "", grev: "", max: 60, globalOff: false,
     loading: false, again: false, fails: 0, timer: 0, dead: false, sending: false,
-    wanted: "", rolesByName: Object.create(null), // #with=<name> still waiting for the friend list
+    wanted: "", replyTo: null, rolesByName: Object.create(null), // #with=<name> still waiting for the friend list
     lastPing: 0,
   };
 
@@ -50,6 +50,26 @@
   const cleanName = (v) => String(v || "").trim().replace(/^@/, "").toLowerCase();
   const visibleNow = () => document.visibilityState === "visible" && document.hasFocus();
   const inGlobal = () => state.active === GLOBAL;
+  function openPublicProfile(name) {
+    if (typeof window.openPublicProfileOverlay === "function") window.openPublicProfileOverlay(name);
+    else toast("Public profiles are unavailable right now.");
+  }
+  function renderReplyComposer() {
+    const bar = $("replyComposer");
+    const target = state.replyTo;
+    if (!bar) return;
+    bar.hidden = !target;
+    if (!target) return;
+    $("replyComposerName").textContent = target.unavailable ? "Original message unavailable" : shown(target.from);
+    $("replyComposerText").textContent = target.unavailable ? "" : target.text;
+  }
+  function setReplyTarget(message) {
+    state.replyTo = message && Number.isSafeInteger(Number(message.id)) && Number(message.id) > 0
+      ? { id: Number(message.id), from: message.from, text: message.text, unavailable: !!message.unavailable }
+      : null;
+    renderReplyComposer();
+    $("msg").focus({ preventScroll: true });
+  }
 
   // Same small DOM helper everywhere; all user text goes in through
   // textContent, never innerHTML.
@@ -301,6 +321,8 @@
   function open(name) {
     state.active = name;
     state.messages = [];
+    state.replyTo = null;
+    renderReplyComposer();
     state.rev = "";
     state.lastPing = 0;
     closeUserMenu();
@@ -316,6 +338,8 @@
   function closeConversation() {
     closeUserMenu();
     state.active = "";
+    state.replyTo = null;
+    renderReplyComposer();
     state.rev = "";
     paintDockPlate();
     if (M) M.setViewing("");
@@ -325,12 +349,17 @@
   }
 
   $("backBtn").addEventListener("click", closeConversation);
+  $("peerProfileButton").addEventListener("click", () => {
+    if (state.active && !inGlobal()) openPublicProfile(state.active);
+  });
 
   $("removeBtn").addEventListener("click", () => {
     const name = state.active;
     if (!name) return;
     if (!window.confirm(`Remove ${shown(name)} (@${name})? This also deletes your chat with them.`)) return;
     state.active = "";
+    state.replyTo = null;
+    renderReplyComposer();
     if (M) M.setViewing("");
     $("chat").classList.remove("open");
     act("remove", { name }, `Removed @${name}`);
@@ -374,19 +403,29 @@
     }
     state.sending = true;
     const to = state.active;
+    const replyTo = state.replyTo;
     box.value = "";
     state.lastPing = 0;
     updateCount();
     autosize();
-    const tmp = { from: state.me, text, ts: Date.now(), pending: true };
+    const tmp = {
+      from: state.me, text, ts: Date.now(), pending: true,
+      replyTo: replyTo ? { id: replyTo.id, from: replyTo.from, text: replyTo.text, unavailable: replyTo.unavailable } : null,
+    };
+    state.replyTo = null;
+    renderReplyComposer();
     state.messages.push(tmp);
     renderThread(true);
     try {
-      const r = await post("send", room ? { room: "global", text } : { to, text });
+      const payload = room ? { room: "global", text } : { to, text };
+      if (replyTo) payload.replyTo = replyTo.id;
+      const r = await post("send", payload);
       if (!r || r.ok !== true) throw new Error((r && r.error) || "Couldn't send that.");
     } catch (err) {
       state.messages = state.messages.filter((m) => m !== tmp);
       if (!box.value) box.value = text;
+      if (replyTo && state.active === to && !state.replyTo) state.replyTo = replyTo;
+      renderReplyComposer();
       updateCount();
       renderThread(false);
       toast(err.message || "Couldn't send that.");
@@ -397,6 +436,7 @@
   }
 
   $("composer").addEventListener("submit", (e) => { e.preventDefault(); send(); });
+  $("cancelReply").addEventListener("click", () => setReplyTarget(null));
   $("msg").addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); }
   });
@@ -680,6 +720,10 @@
       holder.append(inGlobal() ? el("span", { class: "ws-av global-av" }, icon("fa-solid fa-earth-americas")) : avatar(state.active));
     }
     $("peer").textContent = peerTitle();
+    const peerProfileButton = $("peerProfileButton");
+    peerProfileButton.disabled = inGlobal();
+    peerProfileButton.setAttribute("aria-label", inGlobal() ? "Global chat" : `View @${state.active}'s profile`);
+    peerProfileButton.title = inGlobal() ? "" : `View @${state.active}'s profile`;
     $("removeBtn").hidden = inGlobal();
     $("msg").placeholder = inGlobal() ? "Message everyone… (Enter to send)" : "Message… (Enter to send)";
     $("keepNote").textContent = inGlobal()
@@ -731,17 +775,35 @@
       const mine = m.from === state.me;
       // A new run starts for a different sender or after a pause.
       if (!grp || !prev || prev.from !== m.from || m.ts - prev.ts > GROUP_GAP_MS) {
-        // In global chat, other people's names and pictures open a menu for
-        // viewing their profile and connecting with them.
-        const person = (node) => (inGlobal() && !mine
-          ? el("button", { class: "who-btn", type: "button", title: "@" + m.from, "aria-label": "Options for " + shown(m.from), onclick: (e) => showUserMenu(m.from, e.currentTarget) }, node)
-          : node);
+        const person = (node) => {
+          if (mine) return node;
+          if (inGlobal()) return el("button", {
+            class: "who-btn", type: "button", title: "@" + m.from, "aria-label": "Options for " + shown(m.from),
+            onclick: (e) => showUserMenu(m.from, e.currentTarget),
+          }, node);
+          return el("button", {
+            class: "who-btn", type: "button", title: `View @${m.from}'s profile`, "aria-label": `View ${shown(m.from)}'s profile`,
+            onclick: () => openPublicProfile(m.from),
+          }, node);
+        };
         stack = el("div", { class: "stack" },
           el("div", { class: "by" }, person(nameTag("b", m.from)), " · " + (m.pending ? "sending…" : fmtTime(m.ts))));
         grp = el("div", { class: "grp " + (mine ? "me" : "them") }, person(avatar(m.from, "sm")), stack);
         box.append(grp);
       }
-      stack.append(el("div", { class: "bubble" + (m.pending ? " pending" : ""), title: m.pending ? "" : fmtTime(m.ts), text: m.text }));
+      const body = el("div", { class: "message-body" });
+      if (m.replyTo) {
+        body.append(m.replyTo.unavailable
+          ? el("div", { class: "reply-quote" }, el("b", { text: "Original message" }), el("span", { text: "This message is no longer available" }))
+          : el("div", { class: "reply-quote" }, el("b", { text: shown(m.replyTo.from) }), el("span", { text: m.replyTo.text })));
+      }
+      body.append(el("div", { class: "bubble" + (m.pending ? " pending" : ""), title: m.pending ? "" : fmtTime(m.ts), text: m.text }));
+      const replyButton = el("button", {
+        class: "message-reply", type: "button", title: "Reply to this message",
+        "aria-label": `Reply to ${shown(m.from)}'s message`, hidden: !m.id || m.pending,
+        onclick: () => setReplyTarget(m),
+      }, icon("fa-solid fa-reply"));
+      stack.append(el("div", { class: "message-line" }, body, replyButton));
       prev = m;
     }
     if (inGlobal()) new Set(state.messages.map((m) => m.from)).forEach(wantPlate);
@@ -787,10 +849,7 @@
     menu.textContent = "";
     menu.append(
       el("div", { class: "um-head" }, avatar(name, "sm"), el("span", { class: "um-who" }, nameTag("b", name), el("small", { text: "@" + name }))),
-      el("button", { class: "btn ghost sm", type: "button", onclick: go(() => {
-        if (typeof window.openPublicProfileOverlay === "function") window.openPublicProfileOverlay(name);
-        else toast("Public profiles are unavailable right now.");
-      }) }, icon("fa-solid fa-id-card"), " View profile"),
+      el("button", { class: "btn ghost sm", type: "button", onclick: go(() => openPublicProfile(name)) }, icon("fa-solid fa-id-card"), " View profile"),
       action
     );
     menu.dataset.for = name;

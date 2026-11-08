@@ -145,6 +145,9 @@ div.conv-row { cursor: default; }
 .idle i { display: block; font-size: 2.2rem; margin-bottom: 10px; color: var(--accent-color, #f44); }
 .convbody { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .head { flex: none; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.12); }
+.peer-profile-btn { display:flex; flex:1; min-width:0; align-items:center; gap:10px; padding:0; border:0; background:transparent; color:inherit; text-align:left; cursor:pointer; }
+.peer-profile-btn:disabled { cursor:default; }
+.peer-profile-btn:focus-visible { outline:2px solid var(--accent-color,#f44); outline-offset:3px; border-radius:6px; }
 .head .who { flex: 1; min-width: 0; }
 .head .who b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .head .who small { display: block; font-size: 0.72rem; opacity: 0.7; min-height: 1.2em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -168,11 +171,29 @@ div.conv-row { cursor: default; }
 .grp .by.has-plate { opacity: 1; }
 .ws-plated { position: relative; isolation: isolate; display: inline-block; padding: 1px 9px; border-radius: 7px; }
 .ws-plated::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: var(--plate); background-size: var(--plate-size,cover); background-repeat: var(--plate-repeat,no-repeat); background-position: center; opacity: var(--plate-opacity,1); }
+.message-line { display:flex; align-items:flex-end; gap:4px; min-width:0; }
+.grp.me .message-line { flex-direction:row-reverse; }
+.message-body { min-width:0; max-width:100%; }
 .bubble { padding: 7px 12px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.45; font-size: 0.88rem; border: 2px solid rgba(255,255,255,0.18); max-width: 100%; }
 .them .bubble { background: rgba(255,255,255,0.09); border-radius: 16px 16px 16px 4px; }
-.them .bubble + .bubble { border-radius: 4px 16px 16px 4px; }
+.them .message-line ~ .message-line .bubble { border-radius: 4px 16px 16px 4px; }
 .me .bubble { background: var(--accent-color, #f44); border-color: var(--accent-color, #f44); color: #fff; border-radius: 16px 16px 4px 16px; }
-.me .bubble + .bubble { border-radius: 16px 4px 4px 16px; }
+.me .message-line ~ .message-line .bubble { border-radius: 16px 4px 4px 16px; }
+.reply-quote { display:flex; flex-direction:column; max-width:100%; margin:0 0 3px; padding:4px 8px; overflow:hidden; border-radius:8px 8px 0 0; background:rgba(255,255,255,.09); font-size:.72rem; line-height:1.35; }
+.reply-quote b,.reply-quote span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.reply-quote b { font-size:.68rem; opacity:.85; }
+.reply-quote span { opacity:.9; }
+.message-reply { flex:none; width:28px; height:28px; padding:0; border:1px solid rgba(255,255,255,.22); border-radius:50%; background:rgba(0,0,0,.24); color:inherit; cursor:pointer; opacity:0; transition:opacity .12s ease; }
+.message-line:hover .message-reply,.message-reply:focus-visible { opacity:1; }
+.message-reply:focus-visible { outline:2px solid var(--accent-color,#f44); outline-offset:2px; }
+.message-reply[hidden] { display:none; }
+.reply-composer { display:flex; align-items:center; gap:10px; min-width:0; margin-bottom:8px; padding:7px 10px; border-radius:8px; background:rgba(255,255,255,.08); font-size:.74rem; }
+.reply-composer[hidden] { display:none; }
+.reply-composer .reply-copy { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.reply-composer .reply-copy b { margin-right:6px; }
+.reply-cancel { flex:none; width:28px; height:28px; border:0; border-radius:50%; background:transparent; color:inherit; cursor:pointer; }
+.reply-cancel:hover { background:rgba(255,255,255,.1); }
+@media (hover:none) { .message-reply { opacity:.8; } }
 .bubble.pending { opacity: 0.6; }
 .bubble[title] { cursor: default; }
 .who-btn { background: none; border: 0; padding: 0; margin: 0; color: inherit; font: inherit; cursor: pointer; display: inline-flex; align-items: center; }
@@ -215,9 +236,8 @@ div.conv-row { cursor: default; }
   .status.sync::before, .ws-dots i { animation: none; }
 }
 body.profile-modal-open { overflow: hidden; backdrop-filter: none; -webkit-backdrop-filter: none; }
-#profileModal.pfm { display:none; position:fixed; inset:0; width:100vw; height:100vh; height:100dvh; box-sizing:border-box; z-index:9999; align-items:center; justify-content:center; overflow:auto; padding:8px; background:transparent; }
+#profileModal.pfm { display:none; position:fixed; inset:0; width:100vw; height:100vh; height:100dvh; box-sizing:border-box; z-index:9999; align-items:center; justify-content:center; overflow:auto; padding:8px; background:rgba(0,0,0,.62); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); }
 #profileModal.pfm.visible { display:flex; }
-#profileModal.pfm::before { content:""; position:fixed; inset:0; z-index:0; background:rgba(0,0,0,.62); backdrop-filter:blur(8px); }
 #profileModal .pfm-effects { position:fixed; inset:0; z-index:1; display:block; width:100vw; height:100vh; pointer-events:none; }
 #profileModal .pfm-effects[hidden] { display:none; }
 #profileModal .pfm-stage { position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; gap:12px; width:100%; max-width:620px; margin:auto; }
@@ -283,14 +303,20 @@ body.profile-modal-open { overflow: hidden; backdrop-filter: none; -webkit-backd
       <div class="convbody" id="convBody" hidden>
         <div class="head">
           <button class="btn ghost sm" id="backBtn" type="button" aria-label="Back to conversations"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
-          <span id="peerAvatar" aria-hidden="true"></span>
-          <div class="who"><b id="peer"></b><small id="peerSub"></small></div>
+          <button type="button" class="peer-profile-btn" id="peerProfileButton" disabled aria-label="View profile">
+            <span id="peerAvatar" aria-hidden="true"></span>
+            <span class="who"><b id="peer"></b><small id="peerSub"></small></span>
+          </button>
           <span class="cap" id="cap"></span>
           <button class="btn ghost sm" id="removeBtn" type="button" title="Remove friend and delete this chat"><i class="fa-solid fa-user-minus" aria-hidden="true"></i> Remove</button>
         </div>
         <div class="thread" id="thread" role="log" aria-live="polite"></div>
         <div class="typing-row" id="typingRow" role="status" aria-live="polite"></div>
         <div class="composer-wrap">
+          <div class="reply-composer" id="replyComposer" role="status" hidden>
+            <span class="reply-copy"><b id="replyComposerName"></b><span id="replyComposerText"></span></span>
+            <button type="button" class="reply-cancel" id="cancelReply" aria-label="Cancel reply"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+          </div>
           <form class="composer" id="composer" autocomplete="off">
             <textarea id="msg" rows="1" maxlength="500" placeholder="Message… (Enter to send)" aria-label="Message"></textarea>
             <button class="btn" id="sendBtn" type="submit"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Send</button>
@@ -321,6 +347,6 @@ body.profile-modal-open { overflow: hidden; backdrop-filter: none; -webkit-backd
 <script src="../../js/cursors.js"></script>
 <script src="../../js/msgcore.js?v=account-profile-isolation-2"></script>
 <script src="../../js/profile-modal.js?v=profile-text-alignment-1"></script>
-<script src="../../js/chat.js?v=guest-mode-legacy-import"></script>
+<script src="../../js/chat.js?v=profile-replies-v1"></script>
 </body>
 </html>

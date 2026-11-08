@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.9.0/cdn/themes/dark.css" />
 <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.9.0/cdn/shoelace-autoloader.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css" />
-<link rel="stylesheet" href="profile-testing.css?v=solid-profile-banner">
+<link rel="stylesheet" href="profile-testing.css?v=profile-layer-opacity-v1">
 </head>
 <body>
 <div id="profileEditor">
@@ -37,7 +37,7 @@
 
   <div class="edit-group">
    <span class="edit-label">Banner</span>
-   <button type="button" class="edit-tile bar" data-open="banner" aria-label="Edit banner and divider"><span class="tile-fill" id="tileBanner"></span><span class="tile-cap">Image, tint &amp; divider</span></button>
+   <button type="button" class="edit-tile bar" data-open="banner" aria-label="Edit banner and divider"><span class="tile-fill" id="tileBanner"></span><span class="tile-cap">Image, colour &amp; divider</span></button>
   </div>
 
   <div class="edit-group">
@@ -135,10 +135,11 @@
   </section>
 
   <section class="edit-pane" id="pane-banner" hidden>
-   <h2>Banner image</h2>
+   <h2>Banner</h2>
    <div class="picker"><input type="text" class="pfilter" data-for="banner" placeholder="search banners..."><div class="grid" id="pickBanner"></div></div>
    <label><span>Image URL</span><input type="text" id="bimgMedia" placeholder="blank = default"></label>
-   <label><span>Tint</span><input type="color" id="bannerTint"></label>
+   <label><span>Background colour</span><input type="color" id="bannerTint"></label>
+   <label><span>Image opacity</span><input type="range" id="bannerOpacity" min="0" max="100"></label>
    <label><span>Banner height</span><input type="range" id="bh" min="90" max="420"></label>
    <div class="media-strip"><button type="button" class="mini" id="cropBannerBtn">Crop banner</button></div>
    <h2>Banner divider</h2>
@@ -180,13 +181,13 @@
   </section>
 
   <section class="edit-pane" id="pane-wrapper" hidden>
-   <label><span>Background</span><select id="pwrapperMode"><option value="image">Image</option><option value="color">Solid colour</option></select></label>
-   <label id="wrapperColorControl" hidden><span>Colour</span><input type="color" id="pwrapperColor"></label>
+   <label><span>Background</span><select id="pwrapperMode"><option value="image">Colour with image overlay</option><option value="color">Solid colour</option></select></label>
+   <label id="wrapperColorControl"><span>Background colour</span><input type="color" id="pwrapperColor"></label>
    <div id="wrapperImageControls">
     <div class="picker"><input type="text" class="pfilter" data-for="wrapper" placeholder="search wrappers..."><div class="grid" id="pickWrapper"></div></div>
     <label><span>Image URL</span><input type="text" id="pwrapper" placeholder="blank = none"></label>
+    <label><span>Image opacity</span><input type="range" id="pwrapperOpacity" min="0" max="100"></label>
    </div>
-   <label><span>Opacity</span><input type="range" id="pwrapperOpacity" min="0" max="100"></label>
   </section>
 
   <section class="edit-pane" id="pane-effects" hidden>
@@ -370,6 +371,6 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
-<script src="../../js/profile-testing.js?v=profile-text-alignment-1"></script>
+<script src="../../js/profile-testing.js?v=profile-layer-opacity-v1"></script>
 </body>
 </html>
