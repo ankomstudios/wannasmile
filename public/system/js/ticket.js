@@ -102,6 +102,11 @@
     return await authenticate(String(accountId || "").trim(), String(key || "").trim()) ? "approved" : "unknown";
   }
 
+  async function session() {
+    if (!id() || !secret()) return null;
+    return await authenticate(id(), secret());
+  }
+
   function revoke() {
     clearAuthState();
     document.dispatchEvent(new CustomEvent("ws:ticket-gate"));
@@ -202,6 +207,7 @@
     register,
     login,
     check,
+    session,
     verify,
     revoke,
     logout,

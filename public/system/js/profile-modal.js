@@ -24,6 +24,7 @@
   let stage = "view";
   let saving = null;
   let publicProfile = null;
+  let accountRoles = [];
   let frameHeight = 420;
   let fxType = "none";
   let fxCount = 0;
@@ -37,6 +38,18 @@
   const toast = (m) => { if (typeof window.showToast === "function") window.showToast(m); };
   const post = (message) => { try { frame.contentWindow?.postMessage(message, "*"); } catch (_) {} };
   const isOpen = () => modal.classList.contains("visible");
+  const validRoles = (roles) => [...new Set((Array.isArray(roles) ? roles : [])
+    .filter((role) => ["admin", "contributor", "tester"].includes(role)))];
+  async function loadAccountRoles() {
+    if (!window.WS_Ticket?.session) return;
+    try {
+      const account = await window.WS_Ticket.session();
+      accountRoles = validRoles(account?.roles);
+      if (!publicProfile && isOpen()) post({ type: "ws-account-roles", roles: accountRoles });
+    } catch (error) {
+      console.error("Could not load account roles for the profile modal.", error);
+    }
+  }
   function fitFrame() {
     const viewportHeight = window.visualViewport?.height || window.innerHeight;
     const availableHeight = Math.max(160, viewportHeight - 88);
@@ -161,6 +174,7 @@
   function open() {
     window.WS_WordFilter?.load?.();
     publicProfile = null;
+    accountRoles = [];
     stage = "view";
     modal.dataset.stage = "view";
     modal.scrollTop = 0;
@@ -173,6 +187,7 @@
     document.body.classList.add("profile-modal-open");
     modal.setAttribute("aria-hidden", "false");
     primary.focus({ preventScroll: true });
+    loadAccountRoles();
   }
   async function openPublic(username) {
     const name = String(username || "").trim().replace(/^@/, "").toLowerCase();
@@ -196,6 +211,7 @@
       publicProfile = {
         username: name,
         profile: result.profile,
+        roles: validRoles(result.roles),
         isAdmin: result.isAdmin === true,
         activity: Array.isArray(result.activity) ? result.activity : [],
         friends: Array.isArray(result.friends) ? result.friends : [],
@@ -255,11 +271,15 @@
         type: "ws-public-profile",
         username: publicProfile.username,
         profile: publicProfile.profile,
+        roles: publicProfile.roles,
         isAdmin: publicProfile.isAdmin,
         activity: publicProfile.activity,
         friends: publicProfile.friends,
       });
-      else card.dataset.loading = "false";
+      else {
+        card.dataset.loading = "false";
+        post({ type: "ws-account-roles", roles: accountRoles });
+      }
     } else if (d.type === "ws-public-profile-ready" && publicProfile) card.dataset.loading = "false";
     else if (d.type === "ws-profile-modal-full" && publicProfile) setStage(d.open === false ? "view" : "full");
     else if (d.type === "ws-profile-modal-size") {

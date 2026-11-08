@@ -54,6 +54,8 @@ const FALLBACK_ACH = {
 const $ = (id) => document.getElementById(id);
 let publicProfileName = "";
 let publicProfileIsAdmin = false;
+let publicProfileRoles = [];
+let accountProfileRoles = [];
 let publicActivityData = [];
 let publicFriendsData = [];
 let publicProfileDataReady = !PUBLIC_PROFILE;
@@ -739,9 +741,18 @@ function paint() {
     badge.setAttribute("aria-label", "Bot account");
     n.append(badge);
   }
-  if (PUBLIC_PROFILE && publicProfileIsAdmin) {
+  const roles = PUBLIC_PROFILE ? publicProfileRoles : EMBEDDED_PROFILE ? accountProfileRoles : [];
+  roles.forEach((role) => {
     const badge = document.createElement("span");
-    badge.className = "public-admin-shield";
+    badge.className = `public-role-shield public-${role}-shield`;
+    badge.textContent = role;
+    badge.title = `WannaSmile ${role}`;
+    badge.setAttribute("aria-label", `${role[0].toUpperCase()}${role.slice(1)} account`);
+    n.append(badge);
+  });
+  if (PUBLIC_PROFILE && publicProfileIsAdmin && !roles.includes("admin")) {
+    const badge = document.createElement("span");
+    badge.className = "public-role-shield public-admin-shield";
     badge.textContent = "admin";
     badge.title = "WannaSmile administrator";
     badge.setAttribute("aria-label", "Administrator account");
@@ -958,7 +969,9 @@ function bindProfilePreview() {
           S.achDemo = true;
           publicProfileName = String(data.username || "").trim().replace(/^@/, "").toLowerCase();
           if (!/^[a-z0-9][a-z0-9_.-]{2,19}$/.test(publicProfileName)) throw new Error("Invalid profile username.");
-          publicProfileIsAdmin = data.isAdmin === true;
+          publicProfileRoles = [...new Set((Array.isArray(data.roles) ? data.roles : [])
+            .filter((role) => ["admin", "contributor", "tester"].includes(role)))];
+          publicProfileIsAdmin = data.isAdmin === true || publicProfileRoles.includes("admin");
           publicActivityData = Array.isArray(data.activity) ? data.activity.filter((entry) =>
             entry && typeof entry.url === "string" && Number.isFinite(entry.t) && /^https?:\/\//i.test(entry.url)
           ).slice(0, RECENT_MAX) : [];
@@ -986,6 +999,10 @@ function bindProfilePreview() {
           console.error("Could not display the public profile.", error);
           toHost("ws-profile-modal-close");
         }
+      } else if (data.type === "ws-account-roles" && EMBEDDED_PROFILE && !PUBLIC_PROFILE) {
+        accountProfileRoles = [...new Set((Array.isArray(data.roles) ? data.roles : [])
+          .filter((role) => ["admin", "contributor", "tester"].includes(role)))];
+        paint();
       }
     });
     $("viewFullProfile").addEventListener("click", () => {

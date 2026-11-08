@@ -42,7 +42,7 @@
   const state = {
     me: "", friends: [], active: "", messages: [], rev: "", grev: "", max: 60, globalOff: false,
     loading: false, again: false, fails: 0, timer: 0, dead: false, sending: false,
-    wanted: "", adminNames: [], // #with=<name> still waiting for the friend list
+    wanted: "", rolesByName: Object.create(null), // #with=<name> still waiting for the friend list
     lastPing: 0,
   };
 
@@ -69,7 +69,11 @@
   // ── names and pictures (WS_Msg when present) ──────────────────────────
   const shown = (name) => (M ? M.displayName(name) : name);
   const isBotAccount = (name) => cleanName(name) === "wannasmilebot";
-  const isAdminAccount = (name) => state.adminNames.includes(cleanName(name));
+  const accountRoles = (name) => state.rolesByName[cleanName(name)] || [];
+  const isRoleAccount = (name, role) => accountRoles(name).includes(role);
+  const ROLE_LABELS = { admin: "Administrator", contributor: "Contributor", tester: "Tester" };
+  const roleMapSignature = (roles) => JSON.stringify(Object.keys(roles).sort()
+    .map((name) => [name, [...roles[name]].sort()]));
   function avatar(name, cls) {
     if (M) return M.avatar(name, cls);
     return el("span", { class: "ws-av" + (cls ? " " + cls : "") }, String(name || "?").charAt(0).toUpperCase());
@@ -79,7 +83,11 @@
     const node = el(tag, cls ? { class: cls, "data-ws-name": user } : { "data-ws-name": user });
     node.append(el("span", { class: "ws-name-text", text: shown(user) }));
     if (isBotAccount(user)) node.append(el("span", { class: "ws-bot-shield", title: "WannaSmile demo bot", "aria-label": "Bot account" }, "bot"));
-    if (isAdminAccount(user)) node.append(el("span", { class: "ws-admin-shield", title: "WannaSmile administrator", "aria-label": "Administrator account" }, "admin"));
+    accountRoles(user).forEach((role) => node.append(el("span", {
+      class: `ws-role-shield ws-${role}-shield`,
+      title: `WannaSmile ${ROLE_LABELS[role]}`,
+      "aria-label": `${ROLE_LABELS[role]} account`,
+    }, role)));
     return node;
   }
   function refreshNames() {
@@ -87,12 +95,12 @@
       const t = shown(n.dataset.wsName);
       const label = n.querySelector(".ws-name-text");
       if (label && label.textContent !== t) label.textContent = t;
-      const adminBadge = n.querySelector(".ws-admin-shield");
-      if (isAdminAccount(n.dataset.wsName) && !adminBadge) {
-        n.append(el("span", { class: "ws-admin-shield", title: "WannaSmile administrator", "aria-label": "Administrator account" }, "admin"));
-      } else if (!isAdminAccount(n.dataset.wsName) && adminBadge) {
-        adminBadge.remove();
-      }
+      n.querySelectorAll(".ws-role-shield").forEach((badge) => badge.remove());
+      accountRoles(n.dataset.wsName).forEach((role) => n.append(el("span", {
+        class: `ws-role-shield ws-${role}-shield`,
+        title: `WannaSmile ${ROLE_LABELS[role]}`,
+        "aria-label": `${ROLE_LABELS[role]} account`,
+      }, role)));
     });
   }
 
@@ -183,12 +191,22 @@
       state.rev = data.rev || state.rev;
       state.grev = data.grev || state.grev;
       net("live", "Live");
-      const adminNames = Array.isArray(data.adminNames)
-        ? [...new Set(data.adminNames.map(cleanName).filter((name) => NAME_RE.test(name)))]
-        : state.adminNames;
-      const adminsChanged = adminNames.length !== state.adminNames.length || adminNames.some((name) => !state.adminNames.includes(name));
-      if (adminsChanged) {
-        state.adminNames = adminNames;
+      const previousRoles = roleMapSignature(state.rolesByName);
+      if (data.roleNames && typeof data.roleNames === "object" && !Array.isArray(data.roleNames)) {
+        const roleNames = Object.create(null);
+        Object.entries(data.roleNames).forEach(([rawName, rawRoles]) => {
+          const name = cleanName(rawName);
+          if (!NAME_RE.test(name) || !Array.isArray(rawRoles)) return;
+          const roles = [...new Set(rawRoles.filter((role) => ["admin", "contributor", "tester"].includes(role)))];
+          if (roles.length) roleNames[name] = roles;
+        });
+        state.rolesByName = roleNames;
+      } else if (Array.isArray(data.adminNames)) {
+        state.rolesByName = Object.create(null);
+        data.adminNames.map(cleanName).filter((name) => NAME_RE.test(name))
+          .forEach((name) => { state.rolesByName[name] = ["admin"]; });
+      }
+      if (previousRoles !== roleMapSignature(state.rolesByName)) {
         paintMe();
         refreshNames();
         if (inGlobal()) renderThread(false);
@@ -430,8 +448,10 @@
     const dock = $("userNameplate");
     const shield = $("meBotShield");
     if (shield) shield.hidden = !isBotAccount(state.me);
-    const adminShield = $("meAdminShield");
-    if (adminShield) adminShield.hidden = !isAdminAccount(state.me);
+    ["admin", "contributor", "tester"].forEach((role) => {
+      const shield = $(`me${role[0].toUpperCase()}${role.slice(1)}Shield`);
+      if (shield) shield.hidden = !isRoleAccount(state.me, role);
+    });
     if (dock) {
       const presetPlates = {
         ember: "linear-gradient(100deg,#5a1209,#d6401f 40%,#ffb347 65%,#5a1209)",

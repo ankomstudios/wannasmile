@@ -107,6 +107,7 @@ input[type="text"]:focus, textarea:focus { border-color: var(--accent-color, #f4
 .user-dock #meName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .user-dock .who b { display: flex; align-items: center; gap: 7px; }
 .user-dock .ws-bot-shield { flex: none; }
+.user-dock .ws-role-shield { flex: none; }
 .user-dock #meUser { display: block; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .user-dock .fa-chevron-up { margin-left: auto; opacity: .7; }
 .account-actions { display: flex; justify-content: flex-end; padding: 6px 12px 8px; border-top: 1px solid rgba(255,255,255,0.12); }
@@ -173,7 +174,10 @@ div.conv-row { cursor: default; }
 .who-btn { background: none; border: 0; padding: 0; margin: 0; color: inherit; font: inherit; cursor: pointer; display: inline-flex; align-items: center; }
 .ws-name-text { display:inline; }
 .ws-bot-shield { display:inline-flex; align-items:center; justify-content:center; margin-left:5px; padding:1px 5px 2px; min-height:15px; background:#5865f2; color:#fff; clip-path:polygon(15% 0,85% 0,100% 20%,94% 76%,50% 100%,6% 76%,0 20%); font:800 9px/1 monospace; letter-spacing:.1px; vertical-align:middle; }
-.ws-admin-shield { display:inline-flex; align-items:center; justify-content:center; margin-left:5px; padding:1px 5px 2px; min-height:15px; background:#9a6b00; color:#fff; clip-path:polygon(15% 0,85% 0,100% 20%,94% 76%,50% 100%,6% 76%,0 20%); font:800 9px/1 monospace; letter-spacing:.1px; vertical-align:middle; }
+.ws-role-shield { display:inline-flex; align-items:center; justify-content:center; margin-left:5px; padding:1px 5px 2px; min-height:15px; color:#fff; clip-path:polygon(15% 0,85% 0,100% 20%,94% 76%,50% 100%,6% 76%,0 20%); font:800 9px/1 monospace; letter-spacing:.1px; vertical-align:middle; }
+.ws-admin-shield { background:#9a6b00; }
+.ws-contributor-shield { background:#087e75; }
+.ws-tester-shield { background:#6252a8; }
 .user-menu { position: fixed; z-index: 50; display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: 12px; background: #1c1c24; border: 1px solid rgba(255,255,255,0.18); box-shadow: 0 8px 24px rgba(0,0,0,0.45); }
 .user-menu[hidden] { display: none; }
 .um-head { display: flex; align-items: center; gap: 8px; }
@@ -258,7 +262,7 @@ body.profile-modal-open { overflow: hidden; backdrop-filter: none; -webkit-backd
       <button type="button" class="pf user-dock" id="userNameplate" aria-label="Open your profile">
         <span id="meAvatar" aria-hidden="true"></span>
         <span class="who">
-          <b><span id="meName">…</span><span class="ws-bot-shield" id="meBotShield" title="WannaSmile demo bot" aria-label="Bot account" hidden>bot</span><span class="ws-admin-shield" id="meAdminShield" title="WannaSmile administrator" aria-label="Administrator account" hidden>admin</span></b>
+          <b><span id="meName">…</span><span class="ws-bot-shield" id="meBotShield" title="WannaSmile demo bot" aria-label="Bot account" hidden>bot</span><span class="ws-role-shield ws-admin-shield" id="meAdminShield" title="WannaSmile Administrator" aria-label="Administrator account" hidden>admin</span><span class="ws-role-shield ws-contributor-shield" id="meContributorShield" title="WannaSmile Contributor" aria-label="Contributor account" hidden>contributor</span><span class="ws-role-shield ws-tester-shield" id="meTesterShield" title="WannaSmile Tester" aria-label="Tester account" hidden>tester</span></b>
           <small id="meUser">signed in with your account</small>
         </span>
         <i class="fa-solid fa-chevron-up" aria-hidden="true"></i>
@@ -308,11 +312,11 @@ body.profile-modal-open { overflow: hidden; backdrop-filter: none; -webkit-backd
 
 <script src="../../js/endpoints.js"></script>
 <script src="../../js/utils.js"></script>
-<script src="../../js/ticket.js?v=account-logout"></script>
+<script src="../../js/ticket.js?v=account-role-shields"></script>
 <script src="../../js/themify.js?v=theme-fallback-favicon"></script>
 <script src="../../js/cursors.js"></script>
 <script src="../../js/msgcore.js?v=2.4.0-public-profiles"></script>
-<script src="../../js/profile-modal.js?v=admin-hierarchy"></script>
-<script src="../../js/chat.js?v=admin-hierarchy"></script>
+<script src="../../js/profile-modal.js?v=account-role-shields"></script>
+<script src="../../js/chat.js?v=account-role-shields"></script>
 </body>
 </html>
