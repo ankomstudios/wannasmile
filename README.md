@@ -7,10 +7,6 @@
 </p>
 
 <p align="center">
-  Founded by <a href="https://ankomstudios.com">Ankom Studios</a>
-</p>
-
-<p align="center">
   <img src="https://img.shields.io/badge/Website-Live-red?style=flat-square&logo=googlechrome&logoColor=white" alt="Live Website">
   <img src="https://img.shields.io/badge/Version-2.4.0-red?style=flat-square&logo=github&logoColor=white" alt="Version 2.4.0">
   <img src="https://img.shields.io/github/last-commit/ankomstudios/wannasmile?style=flat-square&color=red&logo=git&logoColor=white" alt="Last Commit">
@@ -129,6 +125,12 @@ You can support WannaSmile4Evr by listening to [my music on Spotify](https://ope
 
 <p align="center">
 WannaSmile4Evr is an evolving project. Features, pages, and integrations may change as development continues.
+</p>
+
+<p align="center">
+  <a href="https://ankomstudios.com">
+    <img src="ankomstudios.png" alt="Ankom Studios" width="180">
+  </a>
 </p>
 
 <p align="center">
