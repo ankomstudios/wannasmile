@@ -17,7 +17,7 @@
     "theme", "selectedTheme", "ws_theme_explicit",
     "profileNickname", "profilePfp",
     // profile.js's real keys (the two above are older names)
-    "nickname", "profilePic", "pfpPixelated", "profileBanner", "pfpAlign", "pfpFrame", "pfpFrameScale", "pfpAvatarSize", "pfpShape", "pfpLayout", "pfpWrapper", "pfpWrapperOpacity", "pfAdvancedEdit", "ws_profile_setup",
+    "nickname", "profilePic", "pfpPixelated", "profileBanner", "pfpAlign", "pfpFrame", "pfpFrameScale", "pfpFrameX", "pfpFrameY", "pfpAvatarSize", "pfpShape", "pfpLayout", "pfpWrapper", "pfpWrapperOpacity", "pfAdvancedEdit", "ws_profile_setup", "ws_profile_style_main",
     "welcomeNeverShow",
     "ws_updates_seen",   // last project update dismissed/read (updates.js)
     "searchEngine",
@@ -114,7 +114,9 @@
   function collect() {
     const out = {};
     DATA_KEYS.forEach(k => {
-      const v = localStorage.getItem(k);
+      const v = window.WS_ProfileStorage?.isProfileKey(k)
+        ? window.WS_ProfileStorage.get(k)
+        : localStorage.getItem(k);
       if (v !== null) out[k] = v;
     });
     return out;
@@ -151,7 +153,9 @@
     DATA_KEYS.forEach(k => {
       if (!(k in data) || CREDIT_KEYS.includes(k)) return;
       if (ACCOUNT_KEYS.includes(k) && !takeAccount) return;
-      localStorage.setItem(k, k === "ws_ticket_status" ? account : data[k]);
+      const value = k === "ws_ticket_status" ? account : data[k];
+      if (window.WS_ProfileStorage?.isProfileKey(k)) window.WS_ProfileStorage.set(k, value);
+      else localStorage.setItem(k, value);
       count++;
     });
     // Credits come in as one unit: the balance never arrives without the
@@ -163,6 +167,7 @@
         else localStorage.removeItem(k);
       });
     }
+    if (takeAccount) localStorage.removeItem("ws_guest_mode");
     return { count, account };
   }
 
@@ -194,7 +199,7 @@
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    if (typeof showToast === "function") showToast(`✅ Data exported as ${FILE_NAME}. Keep it safe: it contains your account session.`);
+    if (typeof showToast === "function") showToast(`✅ Data exported as ${FILE_NAME}. Keep it private: it contains your account session key.`);
   }
 
   function importData() {
@@ -334,6 +339,7 @@
     }
 
     CLEARABLE_KEYS.forEach(k => localStorage.removeItem(k));
+    window.WS_ProfileStorage?.clear();
     try { indexedDB.deleteDatabase("ws_library"); } catch (_) {}   // saved library file (main.js)
 
     try {

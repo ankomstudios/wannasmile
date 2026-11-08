@@ -47,7 +47,7 @@ const DEF = {layoutVersion:2,divStyle:"none",divFill:"color",divColor:"#ff4444",
   npKind:"none",npId:"ember",npImg:"",npFit:"cover",npOpacity:100,npDim:30,npAnim:"none",npDur:8,
   cbType:"gradient",cbImg:"",cbAnim:"none",cbDur:6,cbSlice:30,cbRepeat:"stretch",actShow:true,
   bioStyle:"inherit",bioFont:"system-ui,sans-serif",bioSize:13,bioColor:"#f2f3f5",bioOutline:0,bioBold:false,bioItalic:false,
-  sinceStyle:"inherit",sinceFont:"system-ui,sans-serif",sinceSize:12,sinceColor:"#e1e2e4",sinceOutline:0,sinceBold:false,sinceItalic:false};
+  bioAlign:"left",sinceStyle:"inherit",sinceFont:"system-ui,sans-serif",sinceSize:12,sinceColor:"#e1e2e4",sinceOutline:0,sinceBold:false,sinceItalic:false,sinceAlign:"left"};
 const FALLBACK_ACH = {
   wannatutorialize:{"metadata-title":"WannaTutorialize","image-url":"https://placehold.co/64x64/ff4444/ffffff.png?text=WT"},
   criticalReviewer:{"metadata-title":"Critical Reviewer","image-url":"https://placehold.co/64x64/ff8a00/111111.png?text=CR"},
@@ -71,7 +71,7 @@ const PUBLIC_PROFILE_COLORS = new Set([
 ]);
 const PUBLIC_PROFILE_TOKENS = new Set([
   "divStyle", "divFill", "fx_t", "statusMode", "pwrapperMode", "pfpAlign", "pfpBorderMode",
-  "npKind", "npId", "npFit", "npAnim", "cbType", "cbAnim", "cbRepeat", "bioStyle", "sinceStyle",
+  "npKind", "npId", "npFit", "npAnim", "cbType", "cbAnim", "cbRepeat", "bioStyle", "sinceStyle", "bioAlign", "sinceAlign",
 ]);
 function normalizePublicProfile(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Invalid profile data.");
@@ -103,6 +103,8 @@ function normalizePublicProfile(value) {
         if (/^#[0-9a-f]{3,8}$/i.test(text)) profile[key] = text;
       } else if (key === "nf" || key === "bioFont" || key === "sinceFont") {
         if (PUBLIC_PROFILE_FONTS.has(text)) profile[key] = text;
+      } else if (key === "bioAlign" || key === "sinceAlign") {
+        if (["left", "center", "right"].includes(text)) profile[key] = text;
       } else if (PUBLIC_PROFILE_TOKENS.has(key)) {
         if (/^[a-z0-9_-]{1,40}$/i.test(text)) profile[key] = text;
       } else profile[key] = text;
@@ -161,7 +163,8 @@ function pixelateImageData(srcUrl, blocks = 32, outSize = 300) {
 let ACH = toAchievementList(FALLBACK_ACH);
 let S, storedState = {};
 function readEmbeddedProfileState() {
-  const raw = ls(MAIN_PROFILE_KEY);
+  const profileStorage = window.WS_ProfileStorage;
+  const raw = profileStorage ? profileStorage.get(MAIN_PROFILE_KEY) : ls(MAIN_PROFILE_KEY);
   if (raw) {
     try {
       const parsed = JSON.parse(raw);
@@ -177,27 +180,30 @@ function readEmbeddedProfileState() {
       console.error("Could not read the saved profile editor state.", error);
     }
   }
+  if (profileStorage?.isAccountScoped()) return { ...DEF };
   const numberSetting = (key, fallback) => {
-    const value = Number(ls(key));
-    return Number.isFinite(value) && ls(key) !== null ? value : fallback;
+    const raw = profileStorage ? profileStorage.get(key) : ls(key);
+    const value = Number(raw);
+    return Number.isFinite(value) && raw !== null ? value : fallback;
   };
-  const banner = ls("profileBanner") || "";
-  const shape = ls("pfpShape") || "circle";
+  const readProfileValue = (key) => profileStorage ? profileStorage.get(key) : ls(key);
+  const banner = readProfileValue("profileBanner") || "";
+  const shape = readProfileValue("pfpShape") || "circle";
   return {
     ...DEF,
-    nm: ls("nickname") || "",
-    pimg: ls("profilePic") || "",
+    nm: readProfileValue("nickname") || "",
+    pimg: readProfileValue("profilePic") || "",
     bimg: banner,
     bimgMedia: banner,
-    pixelate: ls("pfpPixelated") === "true" ? 32 : 0,
-    pfpAlign: ["left", "center", "right"].includes(ls("pfpAlign")) ? ls("pfpAlign") : "center",
-    pframe: ls("pfpFrame") || "",
+    pixelate: readProfileValue("pfpPixelated") === "true" ? 32 : 0,
+    pfpAlign: ["left", "center", "right"].includes(readProfileValue("pfpAlign")) ? readProfileValue("pfpAlign") : "center",
+    pframe: readProfileValue("pfpFrame") || "",
     pframeScale: Math.round(numberSetting("pfpFrameScale", DEF.pframeScale / 100) * 100),
     pframeX: numberSetting("pfpFrameX", 0),
     pframeY: numberSetting("pfpFrameY", 0),
     pfpSize: numberSetting("pfpAvatarSize", DEF.pfpSize),
     pfpRadius: shape === "circle" ? 50 : shape === "rounded" ? 22 : 0,
-    pwrapper: ls("pfpWrapper") || "",
+    pwrapper: readProfileValue("pfpWrapper") || "",
     pwrapperOpacity: numberSetting("pfpWrapperOpacity", 100),
   };
 }
@@ -218,6 +224,8 @@ const legacyLayout = storedState.layoutVersion !== 2 && Object.keys(storedState)
 const legacyMaskStyle = S.divStyle === "mask";
 if (legacyMaskStyle) S.divStyle = "wave";
 if (!["left", "center", "right"].includes(S.pfpAlign)) S.pfpAlign = DEF.pfpAlign;
+if (!["left", "center", "right"].includes(S.bioAlign)) S.bioAlign = DEF.bioAlign;
+if (!["left", "center", "right"].includes(S.sinceAlign)) S.sinceAlign = DEF.sinceAlign;
 if (!["green", "red", "yellow", "moon", "grey"].includes(S.statusMode)) S.statusMode = DEF.statusMode;
 if (typeof S.bioText !== "string") S.bioText = DEF.bioText;
 if (!Array.isArray(S.roles)) S.roles = [...DEF.roles];
@@ -290,7 +298,9 @@ const initialProfileSnapshot = cloneProfileState(S);
 let profileDraftBeforePreview = null;
 let viewingSavedProfile = false;
 function readMainProfile() {
-  const raw = localStorage.getItem(MAIN_PROFILE_KEY);
+  const raw = window.WS_ProfileStorage
+    ? window.WS_ProfileStorage.get(MAIN_PROFILE_KEY)
+    : localStorage.getItem(MAIN_PROFILE_KEY);
   if (raw === null) return null;
   const parsed = JSON.parse(raw);
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
@@ -302,11 +312,14 @@ function readMainProfile() {
   });
   if (!Array.isArray(profile.roles)) profile.roles = [...DEF.roles];
   if (!Array.isArray(profile.ach)) profile.ach = [];
+  if (!["left", "center", "right"].includes(profile.bioAlign)) profile.bioAlign = DEF.bioAlign;
+  if (!["left", "center", "right"].includes(profile.sinceAlign)) profile.sinceAlign = DEF.sinceAlign;
   return profile;
 }
 function writeMainProfile(profile) {
   try {
-    localStorage.setItem(MAIN_PROFILE_KEY, JSON.stringify(profile));
+    if (window.WS_ProfileStorage) window.WS_ProfileStorage.set(MAIN_PROFILE_KEY, JSON.stringify(profile));
+    else localStorage.setItem(MAIN_PROFILE_KEY, JSON.stringify(profile));
     return true;
   } catch (error) {
     console.error("Could not save the main profile.", error);
@@ -342,7 +355,7 @@ function populatePresets() {
 
 // Bio / date font pickers offer exactly the same fonts as the display name.
 document.querySelectorAll("select.font-copy").forEach((sel) => { sel.innerHTML = $("nf").innerHTML; });
-const SIMPLE = ["bioStyle","bioFont","bioSize","bioColor","bioOutline","sinceStyle","sinceFont","sinceSize","sinceColor","sinceOutline","divStyle","divFill","divColor","divSize","bw","bc1","bc2","ba","bh","r","qText","qSize","qColor","fx_t","fx_n","nm","nf","ns","nc","no","pimg","pframe","pframeScale","pframeX","pframeY","pwrapper","pwrapperMode","pwrapperColor","pwrapperOpacity","pfpSize","pfpBorderSize","pfpBorderMode","pfpBorderColor","bimgMedia","bannerTint","pfpRadius","pixelate","statusMode","npImg","npFit","npOpacity","npDim","npAnim","npDur","cbType","cbImg","cbAnim","cbDur","cbSlice","cbRepeat"];
+const SIMPLE = ["bioStyle","bioAlign","bioFont","bioSize","bioColor","bioOutline","sinceStyle","sinceAlign","sinceFont","sinceSize","sinceColor","sinceOutline","divStyle","divFill","divColor","divSize","bw","bc1","bc2","ba","bh","r","qText","qSize","qColor","fx_t","fx_n","nm","nf","ns","nc","no","pimg","pframe","pframeScale","pframeX","pframeY","pwrapper","pwrapperMode","pwrapperColor","pwrapperOpacity","pfpSize","pfpBorderSize","pfpBorderMode","pfpBorderColor","bimgMedia","bannerTint","pfpRadius","pixelate","statusMode","npImg","npFit","npOpacity","npDim","npAnim","npDur","cbType","cbImg","cbAnim","cbDur","cbSlice","cbRepeat"];
 const DATA_FIELDS = ["pframe","npImg","cbImg"];   // may hold an imported data: image; never dumped into the URL box
 const rangeUnits = { bh:"px", bw:"px", divSize:"px", fx_n:"", ns:"px", no:"px", pfpSize:"px", pfpRadius:"%", pfpBorderSize:"px", pframeScale:"%", pframeX:"px", pframeY:"px", pwrapperOpacity:"%", pixelate:"", qSize:"px", r:"px", npOpacity:"%", npDim:"%", npDur:"s", cbDur:"s", cbSlice:"px", bioSize:"px", bioOutline:"px", sinceSize:"px", sinceOutline:"px" };
 function showRangeValue(input) {
@@ -613,6 +626,9 @@ function paintTextStyle(el, prefix) {
     st.fontStyle = S.ni ? "italic" : "normal";
     outline = Math.min(2, num(S.no, 0, 8, 0));   // small text can't take the name's full outline
   }
+  st.textAlign = ["left", "center", "right"].includes(S[prefix + "Align"])
+    ? S[prefix + "Align"]
+    : DEF[prefix + "Align"];
   st.webkitTextStroke = outline ? `${outline}px #000` : "0";
   st.paintOrder = "stroke fill";
 }
@@ -663,7 +679,8 @@ function paint() {
     : -statusSize / 2;
   status.style.right = `${statusOffset}px`;
   status.style.bottom = `${statusOffset}px`;
-  const savedPic = S.pimgRemoved ? "" : ls("profilePic") || ls("profilePfp") || "";
+  const savedPic = PUBLIC_PROFILE || S.pimgRemoved ? "" : (window.WS_ProfileStorage?.get("profilePic") ||
+    (window.WS_ProfileStorage?.isAccountScoped() ? "" : ls("profilePfp")) || "");
   const requestedPic = (S.pimg || savedPic || PROFILE_PLACEHOLDER).trim();
   const pic = /^(https?:|data:image)/i.test(requestedPic) || requestedPic.startsWith(PROFILE_IMAGE_DIR)
     ? requestedPic
@@ -780,7 +797,8 @@ function paint() {
     frame.classList.remove("visible");
   }
   const n = $("name");
-  n.textContent = S.nm || (PUBLIC_PROFILE ? publicProfileName : ls("nickname")) || "Your Name";
+  n.textContent = S.nm || (PUBLIC_PROFILE ? publicProfileName :
+    (window.WS_ProfileStorage?.get("nickname") || (window.WS_ProfileStorage?.isAccountScoped() ? "" : ls("nickname")))) || "Your Name";
   if (PUBLIC_PROFILE && publicProfileName === "wannasmilebot") {
     const badge = document.createElement("span");
     badge.className = "public-bot-shield";
@@ -860,6 +878,18 @@ function paint() {
   paintTextStyles();
   paintTiles();
   startFx();
+}
+function setMemberSince(value) {
+  const timestamp = typeof value === "number" ? value
+    : typeof value === "string" ? Date.parse(value)
+    : NaN;
+  const date = Number.isFinite(timestamp) && timestamp > 0 && timestamp <= Date.now()
+    ? new Date(timestamp)
+    : null;
+  $("memberSince").textContent = date
+    ? date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+    : "";
+  paint();
 }
 
 function bindPixelButtons() {
@@ -1012,9 +1042,30 @@ function bindProfilePreview() {
       const data = event.data || {};
       if (data.type === "ws-profile-modal-stage") applyStage(data.stage);
       else if (data.type === "ws-profile-modal-action" && data.action === "save") saveToMainProfile();
+      else if (data.type === "ws-account-profile" && EMBEDDED_PROFILE && !PUBLIC_PROFILE) {
+        try {
+          S = normalizePublicProfile(data.profile);
+          const publicAvatar = String(data.avatar || "").trim();
+          if (!S.pimg && !S.pimgRemoved && (
+            /^data:image\/(?:png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/i.test(publicAvatar) ||
+            (() => { try { return new URL(publicAvatar).protocol === "https:"; } catch (_) { return false; } })()
+          )) S.pimg = publicAvatar;
+          syncProfileEditorFields();
+        } catch (error) {
+          console.error("Could not load the signed-in account profile.", error);
+        }
+      }
+      else if (data.type === "ws-account-joined-at" && EMBEDDED_PROFILE && !PUBLIC_PROFILE) {
+        setMemberSince(data.joinedAt);
+      }
       else if (data.type === "ws-public-profile" && PUBLIC_PROFILE) {
         try {
           S = normalizePublicProfile(data.profile);
+          const publicAvatar = String(data.avatar || "").trim();
+          if (!S.pimg && !S.pimgRemoved && (
+            /^data:image\/(?:png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/i.test(publicAvatar) ||
+            (() => { try { return new URL(publicAvatar).protocol === "https:"; } catch (_) { return false; } })()
+          )) S.pimg = publicAvatar;
           S.achDemo = true;
           publicProfileName = String(data.username || "").trim().replace(/^@/, "").toLowerCase();
           if (!/^[a-z0-9][a-z0-9_.-]{2,19}$/.test(publicProfileName)) throw new Error("Invalid profile username.");
@@ -1037,6 +1088,7 @@ function bindProfilePreview() {
             }) : [];
           publicProfileDataReady = true;
           viewingSavedProfile = true;
+          setMemberSince(data.joinedAt);
           document.documentElement.dataset.publicProfile = publicProfileName;
           setViewMode(true);
           syncProfileEditorFields();
@@ -1747,7 +1799,8 @@ function paintTiles() {
   $("tileWrapperPlus").hidden = (S.pwrapperMode === "color") || (!!wrapper.style.backgroundImage && wrapper.style.backgroundImage !== "none");
   $("tileFx").textContent = ({ none: "No effect", snow: "Snow", rain: "Rain", embers: "Embers", stars: "Stars" })[S.fx_t] || "No effect";
   $("tileBubble").textContent = S.qText || "No bubble";
-  const displayName = S.nm || ls("nickname") || "Your Name";
+  const displayName = S.nm || (PUBLIC_PROFILE ? publicProfileName :
+    (window.WS_ProfileStorage?.get("nickname") || (window.WS_ProfileStorage?.isAccountScoped() ? "" : ls("nickname")))) || "Your Name";
   const nameCss = `font-family:${S.nf};color:${S.nc};font-weight:${S.nb ? 700 : 400};font-style:${S.ni ? "italic" : "normal"};-webkit-text-stroke:${Math.min(2, S.no)}px #000;paint-order:stroke fill`;
   $("tileName").textContent = displayName;
   $("tileName").style.cssText = nameCss;
@@ -2076,10 +2129,26 @@ $("actShow").addEventListener("change", renderActivity);
 
 // ── init for the pieces above ──
 (() => {
-  let since = ls("ws_profile_test_since");
-  if (!since) { since = new Date().toISOString(); try { localStorage.setItem("ws_profile_test_since", since); } catch (_) {} }
-  const date = new Date(since);
-  $("memberSince").textContent = Number.isNaN(date.getTime()) ? "" : date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  if (EMBEDDED_PROFILE) {
+    $("memberSince").textContent = "";
+  } else {
+    const profileStorage = window.WS_ProfileStorage;
+    let since = profileStorage ? profileStorage.get("ws_profile_test_since") : ls("ws_profile_test_since");
+    if (!since) {
+      since = new Date().toISOString();
+      try {
+        if (profileStorage) profileStorage.set("ws_profile_test_since", since);
+        else localStorage.setItem("ws_profile_test_since", since);
+      } catch (error) {
+        console.error("Could not save the profile preview date.", error);
+      }
+    }
+    const timestamp = Date.parse(since);
+    const date = Number.isFinite(timestamp) && timestamp > 0 ? new Date(timestamp) : null;
+    $("memberSince").textContent = date
+      ? date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+      : "";
+  }
   paint();   // the Bio & Date tile mirrors this text
 })();
 renderActivity();

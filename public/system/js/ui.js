@@ -316,7 +316,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   if (pfp) {
-    const saved = localStorage.getItem("profilePic");
+    const saved = window.WS_ProfileStorage
+      ? window.WS_ProfileStorage.get("profilePic")
+      : localStorage.getItem("profilePic");
     if (saved && pfp.src !== saved) pfp.src = saved;
   }
 });

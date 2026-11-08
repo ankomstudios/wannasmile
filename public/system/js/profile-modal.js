@@ -24,7 +24,10 @@
   let stage = "view";
   let saving = null;
   let publicProfile = null;
+  let accountProfile = null;
+  let profileFrameReady = false;
   let accountRoles = [];
+  let accountJoinedAt = null;
   let frameHeight = 420;
   let fxType = "none";
   let fxCount = 0;
@@ -45,10 +48,42 @@
     try {
       const account = await window.WS_Ticket.session();
       accountRoles = validRoles(account?.roles);
-      if (!publicProfile && isOpen()) post({ type: "ws-account-roles", roles: accountRoles });
+      if (!publicProfile && isOpen()) {
+        accountJoinedAt = Number.isFinite(account?.joinedAt) ? account.joinedAt : null;
+        post({ type: "ws-account-roles", roles: accountRoles });
+        sendAccountJoinedAt();
+        if (!window.WS_ProfileStorage?.has("ws_profile_style_main") && /^[a-z0-9][a-z0-9_.-]{2,19}$/i.test(account?.username || "")) {
+          const endpoint = window.WS_ENDPOINTS?.chat;
+          if (endpoint) {
+            const url = new URL(endpoint);
+            url.search = new URLSearchParams({ type: "publicprofile", username: account.username }).toString();
+            const response = await fetch(url, { cache: "no-store" });
+            const result = await response.json();
+            if (!response.ok || result?.ok !== true || !result.profile || typeof result.profile !== "object" || Array.isArray(result.profile)) {
+              throw new Error(result?.error || `HTTP ${response.status}`);
+            }
+            if (isOpen() && stage === "view" && !publicProfile &&
+                (localStorage.getItem("ws_username") || "").toLowerCase() === account.username.toLowerCase() &&
+                !window.WS_ProfileStorage?.has("ws_profile_style_main")) {
+              accountProfile = { profile: result.profile, avatar: typeof result.avatar === "string" ? result.avatar : "" };
+              window.WS_ProfileStorage.set("ws_profile_style_main", JSON.stringify(result.profile));
+              sendAccountProfile();
+            }
+          }
+        }
+      }
     } catch (error) {
       console.error("Could not load account roles for the profile modal.", error);
     }
+  }
+  function sendAccountProfile() {
+    if (!accountProfile || !profileFrameReady || publicProfile) return;
+    post({ type: "ws-account-profile", ...accountProfile });
+    accountProfile = null;
+  }
+  function sendAccountJoinedAt() {
+    if (accountJoinedAt === null || !profileFrameReady || publicProfile) return;
+    post({ type: "ws-account-joined-at", joinedAt: accountJoinedAt });
   }
   function fitFrame() {
     const viewportHeight = window.visualViewport?.height || window.innerHeight;
@@ -162,6 +197,7 @@
   }
   function loadFrame() {
     card.dataset.loading = "true";
+    profileFrameReady = false;
     const url = new URL(FRAME_URL);
     url.searchParams.set("embed", "1");
     url.searchParams.set("stage", "view");
@@ -174,6 +210,8 @@
   function open() {
     window.WS_WordFilter?.load?.();
     publicProfile = null;
+    accountProfile = null;
+    accountJoinedAt = null;
     accountRoles = [];
     stage = "view";
     modal.dataset.stage = "view";
@@ -211,10 +249,12 @@
       publicProfile = {
         username: name,
         profile: result.profile,
+        avatar: typeof result.avatar === "string" ? result.avatar : "",
         roles: validRoles(result.roles),
         isAdmin: result.isAdmin === true,
         activity: Array.isArray(result.activity) ? result.activity : [],
         friends: Array.isArray(result.friends) ? result.friends : [],
+        joinedAt: Number.isFinite(result.joinedAt) ? result.joinedAt : null,
       };
       stage = "view";
       modal.dataset.stage = "view";
@@ -243,6 +283,7 @@
     frame.src = "about:blank";
     stage = "view";
     publicProfile = null;
+    accountJoinedAt = null;
     modal.setAttribute("aria-label", "Profile");
   }
   function disregard() {
@@ -267,18 +308,23 @@
     if (e.source !== frame.contentWindow || e.origin !== location.origin) return;
     const d = e.data || {};
     if (d.type === "ws-profile-modal-ready") {
+      profileFrameReady = true;
       if (publicProfile) post({
         type: "ws-public-profile",
         username: publicProfile.username,
         profile: publicProfile.profile,
+        avatar: publicProfile.avatar,
         roles: publicProfile.roles,
         isAdmin: publicProfile.isAdmin,
         activity: publicProfile.activity,
         friends: publicProfile.friends,
+        joinedAt: publicProfile.joinedAt,
       });
       else {
         card.dataset.loading = "false";
         post({ type: "ws-account-roles", roles: accountRoles });
+        sendAccountProfile();
+        sendAccountJoinedAt();
       }
     } else if (d.type === "ws-public-profile-ready" && publicProfile) card.dataset.loading = "false";
     else if (d.type === "ws-profile-modal-full" && publicProfile) setStage(d.open === false ? "view" : "full");
@@ -291,12 +337,12 @@
       clearTimeout(saving); saving = null;
       setStage("view");
       let profile;
-      try { profile = JSON.parse(localStorage.getItem("ws_profile_style_main") || "null"); }
+      try { profile = JSON.parse(window.WS_ProfileStorage?.get("ws_profile_style_main") || "null"); }
       catch (error) { console.error("Could not read the saved public profile.", error); }
       if (!profile || !window.WS_Msg?.publishPublicProfile) {
         toast("Profile saved locally, but it could not be published to global chat.");
       } else {
-        window.WS_Msg.publishPublicProfile(profile).then((result) => {
+        Promise.all([window.WS_Msg.publishPublicProfile(profile), window.WS_Msg.syncProfile?.()]).then(([result]) => {
           toast(result.ok ? "Profile saved and published to global chat." : `Profile saved locally. ${result.error}`);
         }).catch((error) => {
           console.error("Could not publish the saved profile.", error);

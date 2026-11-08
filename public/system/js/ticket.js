@@ -9,6 +9,7 @@
   const STATUS_KEY = "ws_ticket_status";
   const USER_KEY = "ws_username";
   const EMAIL_KEY = "ws_email";
+  const GUEST_KEY = "ws_guest_mode";
 
   const read = (key) => { try { return localStorage.getItem(key) || ""; } catch (_) { return ""; } };
   const write = (key, value) => {
@@ -25,6 +26,7 @@
   const status = () => read(STATUS_KEY);
   const username = () => read(USER_KEY);
   const approved = () => !!id() && !!secret() && status() === "approved";
+  const guest = () => read(GUEST_KEY) === "true" && !approved();
 
   let resolveReady;
   const ready = new Promise((resolve) => { resolveReady = resolve; });
@@ -34,6 +36,7 @@
   }
 
   function setState(account) {
+    write(GUEST_KEY, "");
     write(ID_KEY, account.id);
     write(SECRET_KEY, account.key);
     write(STATUS_KEY, "approved");
@@ -63,6 +66,9 @@
       return result;
     } catch (error) {
       if (error?.name === "AbortError") throw new Error("The account service took too long to answer.");
+      if (error instanceof TypeError && location.protocol === "file:") {
+        throw new Error("Account sign-in is blocked from file:// pages by browser security. For local testing, open WannaSmile at http://localhost:5500 or http://127.0.0.1:5500.");
+      }
       throw error;
     } finally {
       clearTimeout(timeout);
@@ -122,6 +128,13 @@
     changed();
   }
 
+  function continueAsGuest() {
+    if (approved()) return false;
+    write(GUEST_KEY, "true");
+    clearAuthState();
+    return true;
+  }
+
   async function logout() {
     const accountId = id();
     const key = secret();
@@ -161,6 +174,11 @@
       logout.hidden = !approved();
       logout.setAttribute("aria-hidden", String(!approved()));
     }
+    const signIn = document.getElementById("signInAccount");
+    if (signIn) {
+      signIn.hidden = !guest();
+      signIn.setAttribute("aria-hidden", String(!guest()));
+    }
     const element = document.getElementById("dashTicketId");
     if (!element) return;
     const accountId = id();
@@ -195,6 +213,10 @@
         }
       });
     }
+    document.getElementById("signInAccount")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      window.WS_Tutorial?.openAccountGate?.();
+    });
   });
 
   window.WS_Ticket = {
@@ -202,6 +224,7 @@
     id,
     status,
     approved,
+    guest,
     username,
     withTicket,
     register,
@@ -209,6 +232,7 @@
     check,
     session,
     verify,
+    continueAsGuest,
     revoke,
     logout,
   };

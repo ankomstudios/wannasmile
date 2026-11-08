@@ -1,5 +1,46 @@
 "use strict";
 
+window.WS_ProfileStorage = (() => {
+  const keys = new Set([
+    "ws_profile_style_main", "ws_profile_style_modal_draft", "ws_profile_style_test",
+    "profilePic", "nickname", "profilePfp", "profileNickname", "pfpPixelated", "profileBanner", "pfpAlign", "pfpFrame",
+    "pfpFrameScale", "pfpFrameX", "pfpFrameY", "pfpAvatarSize", "pfpShape", "pfpLayout",
+    "pfpWrapper", "pfpWrapperOpacity", "pfAdvancedEdit", "ws_profile_setup", "profileBio", "ws_profile_test_since",
+  ]);
+  const accountName = () => {
+    try {
+      if (localStorage.getItem("ws_ticket_status") !== "approved") return "";
+      const username = (localStorage.getItem("ws_username") || "").trim().replace(/^@/, "").toLowerCase();
+      return /^[a-z0-9][a-z0-9_.-]{2,19}$/.test(username) ? username : "";
+    } catch (_) {
+      return "";
+    }
+  };
+  const key = (name) => {
+    if (!keys.has(name)) throw new Error(`Unsupported profile storage key: ${name}`);
+    const username = accountName();
+    return username ? `${name}::${username}` : name;
+  };
+  const get = (name) => localStorage.getItem(key(name));
+  const set = (name, value) => localStorage.setItem(key(name), value);
+  const remove = (name) => localStorage.removeItem(key(name));
+  const has = (name) => localStorage.getItem(key(name)) !== null;
+  const clear = () => {
+    const bases = [...keys];
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const stored = localStorage.key(i);
+      if (stored && bases.some((base) => stored === base || stored.startsWith(`${base}::`))) {
+        localStorage.removeItem(stored);
+      }
+    }
+  };
+  return Object.freeze({
+    key, get, set, remove, has, clear,
+    isProfileKey: (name) => keys.has(name),
+    isAccountScoped: () => !!accountName(),
+  });
+})();
+
 const clamp    = (v, a = 0, b = 100) => Math.min(b, Math.max(a, v));
 const delay    = (ms) => new Promise((r) => setTimeout(r, ms));
 const safeStr  = (v) => (v == null ? "" : String(v));

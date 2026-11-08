@@ -180,6 +180,10 @@ function currentUsername() {
 const PFP_ALIGNS = ["left", "center", "right"];
 const PFP_ALIGN_KEY = "pfpAlign";
 const PROFILE_LAYOUTS = ["horizontal", "vertical"];
+const profileStore = window.WS_ProfileStorage;
+const profileGet = (key) => profileStore ? profileStore.get(key) : localStorage.getItem(key);
+const profileSet = (key, value) => profileStore ? profileStore.set(key, value) : localStorage.setItem(key, value);
+const profileRemove = (key) => profileStore ? profileStore.remove(key) : localStorage.removeItem(key);
 
 function boundedNumber(value, min, max, fallback) {
   const parsed = Number.parseFloat(value);
@@ -188,23 +192,23 @@ function boundedNumber(value, min, max, fallback) {
 
 function savedProfile() {
   const username = currentUsername();
-  let nick = localStorage.getItem("nickname") || "";
+  let nick = profileGet("nickname") || "";
   if (nick === username) nick = "";
   return {
-    pic:       localStorage.getItem("profilePic") || DEFAULT_PIC,
+    pic:       profileGet("profilePic") || DEFAULT_PIC,
     name:      nick,
-    banner:    localStorage.getItem(BANNER_KEY) || "",
-    pixelated: localStorage.getItem("pfpPixelated") === "true",
-    align:     PFP_ALIGNS.includes(localStorage.getItem(PFP_ALIGN_KEY)) ? localStorage.getItem(PFP_ALIGN_KEY) : "left",
-    frame:     localStorage.getItem(FRAME_KEY) || "",
-    frameScale: boundedNumber(localStorage.getItem(FRAME_SCALE_KEY), FRAME_SCALE_MIN, FRAME_SCALE_MAX, FRAME_SCALE_DEFAULT),
-    frameX:    boundedNumber(localStorage.getItem(FRAME_X_KEY), -80, 80, 0),
-    frameY:    boundedNumber(localStorage.getItem(FRAME_Y_KEY), -80, 80, 0),
-    avatarSize: boundedNumber(localStorage.getItem(AVATAR_SIZE_KEY), AVATAR_SIZE_MIN, AVATAR_SIZE_MAX, AVATAR_SIZE_DEFAULT),
-    avatarShape: AVATAR_SHAPES.includes(localStorage.getItem(AVATAR_SHAPE_KEY)) ? localStorage.getItem(AVATAR_SHAPE_KEY) : "circle",
-    layout:    PROFILE_LAYOUTS.includes(localStorage.getItem(PROFILE_LAYOUT_KEY)) ? localStorage.getItem(PROFILE_LAYOUT_KEY) : "horizontal",
-    wrapper:   localStorage.getItem(WRAPPER_KEY) || "",
-    wrapperOpacity: localStorage.getItem(WRAPPER_OPACITY_KEY) || "",
+    banner:    profileGet(BANNER_KEY) || "",
+    pixelated: profileGet("pfpPixelated") === "true",
+    align:     PFP_ALIGNS.includes(profileGet(PFP_ALIGN_KEY)) ? profileGet(PFP_ALIGN_KEY) : "left",
+    frame:     profileGet(FRAME_KEY) || "",
+    frameScale: boundedNumber(profileGet(FRAME_SCALE_KEY), FRAME_SCALE_MIN, FRAME_SCALE_MAX, FRAME_SCALE_DEFAULT),
+    frameX:    boundedNumber(profileGet(FRAME_X_KEY), -80, 80, 0),
+    frameY:    boundedNumber(profileGet(FRAME_Y_KEY), -80, 80, 0),
+    avatarSize: boundedNumber(profileGet(AVATAR_SIZE_KEY), AVATAR_SIZE_MIN, AVATAR_SIZE_MAX, AVATAR_SIZE_DEFAULT),
+    avatarShape: AVATAR_SHAPES.includes(profileGet(AVATAR_SHAPE_KEY)) ? profileGet(AVATAR_SHAPE_KEY) : "circle",
+    layout:    PROFILE_LAYOUTS.includes(profileGet(PROFILE_LAYOUT_KEY)) ? profileGet(PROFILE_LAYOUT_KEY) : "horizontal",
+    wrapper:   profileGet(WRAPPER_KEY) || "",
+    wrapperOpacity: profileGet(WRAPPER_OPACITY_KEY) || "",
   };
 }
 
@@ -258,7 +262,7 @@ function paintPic(img, src, pixelated, crisp) {
 }
 
 // Shows a frame in an <img> that sits above the picture ("" = none).
-function paintFrame(img, src, scale, x = localStorage.getItem(FRAME_X_KEY), y = localStorage.getItem(FRAME_Y_KEY)) {
+function paintFrame(img, src, scale, x = profileGet(FRAME_X_KEY), y = profileGet(FRAME_Y_KEY)) {
   window.WSFrames.paint(img, src);
   if (!img) return;
   const resolvedScale = boundedNumber(scale, FRAME_SCALE_MIN, FRAME_SCALE_MAX, FRAME_SCALE_DEFAULT);
@@ -372,7 +376,7 @@ function renderProfileDetails() {
 
   let profile = null;
   try {
-    const raw = localStorage.getItem("ws_profile_style_main");
+    const raw = profileGet("ws_profile_style_main");
     if (raw !== null) {
       const parsed = JSON.parse(raw);
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
@@ -424,38 +428,38 @@ function saveProfile({ pic, name, pixelated, banner, align, frame, frameScale, f
   let frameSaved = true;
   let profileSettingsSaved = true;
   if (wrapper !== undefined) {
-    try { if (wrapper) localStorage.setItem(WRAPPER_KEY, wrapper); else localStorage.removeItem(WRAPPER_KEY); }
+    try { if (wrapper) profileSet(WRAPPER_KEY, wrapper); else profileRemove(WRAPPER_KEY); }
     catch (_) {
       wrapperSaved = false;
       if (typeof showToast === "function") showToast("❌ That wrapper couldn't be saved. Try a smaller image or free up browser storage.");
     }
   }
   if (wrapperOpacity !== undefined) {
-    try { if (wrapperOpacity !== "" && wrapperOpacity !== "100") localStorage.setItem(WRAPPER_OPACITY_KEY, wrapperOpacity); else localStorage.removeItem(WRAPPER_OPACITY_KEY); }
+    try { if (wrapperOpacity !== "" && wrapperOpacity !== "100") profileSet(WRAPPER_OPACITY_KEY, wrapperOpacity); else profileRemove(WRAPPER_OPACITY_KEY); }
     catch (_) {
       if (typeof showToast === "function") showToast("❌ Wrapper opacity couldn't be saved. Try again after freeing browser storage.");
     }
   }
   if (frame !== undefined) {
     try {
-      if (frame) localStorage.setItem(FRAME_KEY, frame);
-      else localStorage.removeItem(FRAME_KEY);
+      if (frame) profileSet(FRAME_KEY, frame);
+      else profileRemove(FRAME_KEY);
     } catch (_) {
       frameSaved = false;
       if (typeof showToast === "function") showToast("❌ That frame is too big to save. Try a smaller image.");
     }
   }
-  if (align !== undefined && PFP_ALIGNS.includes(align)) localStorage.setItem(PFP_ALIGN_KEY, align);
+  if (align !== undefined && PFP_ALIGNS.includes(align)) profileSet(PFP_ALIGN_KEY, align);
   if (banner !== undefined) {
     try {
-      if (banner) localStorage.setItem(BANNER_KEY, banner);
-      else localStorage.removeItem(BANNER_KEY);
+      if (banner) profileSet(BANNER_KEY, banner);
+      else profileRemove(BANNER_KEY);
     } catch (_) {
       if (typeof showToast === "function") showToast("❌ That banner is too big to save. Try a smaller image.");
     }
   }
   if (pic !== undefined) {
-    try { localStorage.setItem("profilePic", pic); }
+    try { profileSet("profilePic", pic); }
     catch (_) {
       picSaved = false;
       if (typeof showToast === "function") showToast("❌ That picture couldn't be saved. Try a smaller image or free up browser storage.");
@@ -471,14 +475,14 @@ function saveProfile({ pic, name, pixelated, banner, align, frame, frameScale, f
   ];
   profileSettings.forEach(([value, key, normalize, label]) => {
     if (value === undefined) return;
-    try { localStorage.setItem(key, normalize(value)); }
+    try { profileSet(key, normalize(value)); }
     catch (_) {
       profileSettingsSaved = false;
       if (typeof showToast === "function") showToast(`❌ Your ${label} couldn't be saved. Try again after freeing browser storage.`);
     }
   });
-  if (name     !== undefined) localStorage.setItem("nickname",      name);
-  if (pixelated !== undefined) localStorage.setItem("pfpPixelated", pixelated ? "true" : "false");
+  if (name     !== undefined) profileSet("nickname",      name);
+  if (pixelated !== undefined) profileSet("pfpPixelated", pixelated ? "true" : "false");
   loadProfile();
   return picSaved && wrapperSaved && frameSaved && profileSettingsSaved;
 }
@@ -507,7 +511,7 @@ window.WS_ProfileApply = (profile) => {
 
 // ── Advanced editing ───────────────────────────────────────────────────
 const ADV_EDIT_KEY = "pfAdvancedEdit";
-const advancedEditing = () => { try { return localStorage.getItem(ADV_EDIT_KEY) === "true"; } catch (_) { return false; } };
+const advancedEditing = () => { try { return profileGet(ADV_EDIT_KEY) === "true"; } catch (_) { return false; } };
 
 function paintAdvancedEdit() {
   const on = advancedEditing();
@@ -1063,7 +1067,7 @@ window.closeProfileOverlay = closeProfileOverlay;
 
 window.addEventListener("DOMContentLoaded", () => {
   try {
-    localStorage.removeItem("profileBio");
+    profileRemove("profileBio");
     localStorage.removeItem("ws_ticket_role");
   } catch (_) {}
   loadProfile();
@@ -1147,7 +1151,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (item.id === "pixelToggleBtn") setPending("pixelated", !currentValue("pixelated"));
     if (item.id === "advancedEditBtn") {
       const on = !advancedEditing();
-      try { localStorage.setItem(ADV_EDIT_KEY, String(on)); } catch (_) {}
+      try { profileSet(ADV_EDIT_KEY, String(on)); } catch (_) {}
       paintAdvancedEdit();
       if (typeof showToast === "function") {
         showToast(on ? "Advanced editing on: pick any picture or banner to crop it." : "Advanced editing off.");

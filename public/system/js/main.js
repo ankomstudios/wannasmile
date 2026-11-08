@@ -3365,10 +3365,10 @@ window.addEventListener("load", () => {
     if (_accountAccessPromise) return _accountAccessPromise;
 
     _accountAccessPromise = ticket.ready.then(() => {
-      if (ticket.approved()) return;
+      if (ticket.approved() || ticket.guest?.()) return;
       return new Promise((resolve) => {
         const onChange = () => {
-          if (!ticket.approved()) return;
+          if (!ticket.approved() && !ticket.guest?.()) return;
           document.removeEventListener("ws:ticket-change", onChange);
           resolve();
         };
@@ -3574,7 +3574,8 @@ window.addEventListener("load", () => {
 
   window.reloadAssets = async function () {
     if (window._reloading) return;
-    if (window.WS_ACCOUNTS_ENABLED !== false && !window.WS_Ticket?.approved()) {
+    if (window.WS_ACCOUNTS_ENABLED !== false &&
+        !window.WS_Ticket?.approved() && !window.WS_Ticket?.guest?.()) {
       window.showToast?.("Sign in before reloading the library.");
       return false;
     }

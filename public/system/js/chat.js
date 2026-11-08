@@ -442,7 +442,10 @@
 
   function readOwnProfile() {
     try {
-      const saved = JSON.parse(read("ws_profile_style_main") || "{}");
+      const savedProfile = window.WS_ProfileStorage
+        ? window.WS_ProfileStorage.get("ws_profile_style_main")
+        : read("ws_profile_style_main");
+      const saved = JSON.parse(savedProfile || "{}");
       if (saved && typeof saved === "object" && !Array.isArray(saved)) return saved;
     } catch (error) {
       console.error("Could not read the saved nameplate profile.", error);
@@ -534,6 +537,7 @@
       const res = await fetch(url, { cache: "no-store" });
       const data = await res.json();
       if (!res.ok || !data || data.ok !== true || !data.profile || typeof data.profile !== "object" || Array.isArray(data.profile)) throw new Error("no public profile");
+      M?.setPublicAvatar?.(n, data.avatar);
       plates[n] = { plate: sanitizePlate(data.profile), at: Date.now(), ok: true, busy: false };
     } catch (_) {
       // Not published (or the Worker is busy): keep any older plate, retry later.
@@ -814,13 +818,15 @@
     if (!API) return gate("Chat can't start", "The site's data address (endpoints.js) is missing.", "Back to WannaSmile");
 
     const approved = read(K.status) === "approved" && !!read(K.id) && !!read(K.key);
-    if (!approved) return gate("Sign in to chat", "Create an account or sign in on the WannaSmile homepage, then return here.", "Go to WannaSmile");
+    if (!approved) return gate("Sign in to chat", "Guest mode can browse WannaSmile, but Global Chat requires a verified account. Sign in on the homepage, then return here.", "Go to WannaSmile");
 
     if (typeof window.WS_ProfileApply !== "function") {
       window.WS_ProfileApply = (profile) => {
         if (!profile || typeof profile !== "object" || Array.isArray(profile)) return false;
         try {
-          localStorage.setItem("ws_profile_style_main", JSON.stringify(profile));
+          window.WS_ProfileStorage
+            ? window.WS_ProfileStorage.set("ws_profile_style_main", JSON.stringify(profile))
+            : localStorage.setItem("ws_profile_style_main", JSON.stringify(profile));
           paintMe();
           return true;
         } catch (error) {
@@ -881,7 +887,8 @@
     window.addEventListener("storage", (e) => {
       if (e.key === K.status && e.newValue !== "approved") gate("Sign in to chat", "Your account session ended. Sign in on the WannaSmile homepage, then return here.", "Go to WannaSmile");
       else if (e.key === K.seen) renderFriends();
-      else if (e.key === "ws_profile_style_main") paintMe();
+      else if (e.key === window.WS_ProfileStorage?.key("ws_profile_style_main")) paintMe();
+      else if ([window.WS_ProfileStorage?.key("profilePic"), window.WS_ProfileStorage?.key("nickname"), window.WS_ProfileStorage?.key("pfpPixelated")].includes(e.key)) paintMe();
     });
   }
 

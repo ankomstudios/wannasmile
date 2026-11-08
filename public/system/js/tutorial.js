@@ -49,6 +49,9 @@
   const DONE_KEY         = "ws_tutorial_version";
   const NICK_MAX         = 20;
   const STEP_COUNT       = 8;
+  const profileStorage   = window.WS_ProfileStorage;
+  const profileGet       = (key) => profileStorage ? profileStorage.get(key) : localStorage.getItem(key);
+  const profileSet       = (key, value) => profileStorage ? profileStorage.set(key, value) : localStorage.setItem(key, value);
 
   const needsTutorial = () => {
     try { return localStorage.getItem(DONE_KEY) !== TUTORIAL_VERSION; }
@@ -67,7 +70,7 @@
   };
 
   const accountNeeded = () => window.WS_ACCOUNTS_ENABLED !== false
-    && !!window.WS_Ticket && !window.WS_Ticket.approved();
+    && !!window.WS_Ticket && !window.WS_Ticket.approved() && !window.WS_Ticket.guest?.();
   // Kept around even after the tour is done: an expired session brings the
   // account gate back (ws:ticket-gate).
   if (!pending && !window.WS_Ticket) return;
@@ -159,8 +162,8 @@
   const PROFILE_DONE_KEY = "ws_profile_setup";
   function profileSetUp() {
     try {
-      if (localStorage.getItem(PROFILE_DONE_KEY) === "1") return true;
-      const pic = localStorage.getItem("profilePic") || "";
+      if (profileGet(PROFILE_DONE_KEY) === "1") return true;
+      const pic = profileGet("profilePic") || "";
       return !!pic && typeof DEFAULT_PIC !== "undefined" && pic !== DEFAULT_PIC;
     } catch (_) { return false; }
   }
@@ -385,7 +388,7 @@
           <input id="wstAccountPass" name="password" type="password" maxlength="128" autocomplete="${mode === "register" ? "new-password" : "current-password"}" required />
           <label class="wst-check"><input id="wstAccountShow" type="checkbox" /> Show password</label>
         </form>
-        <p class="wst-note wst-account-note">Email is only used to prevent duplicate accounts; no verification is required. Password recovery is not available yet. Your account ID is not a password.</p>
+        <p class="wst-note wst-account-note">Email is only used to prevent duplicate accounts; no verification is required. Password recovery is not available yet. Your account ID is not a password. For local testing, use localhost:5500 or localhost:8000, not a file:// page.</p>
         <p class="wst-alt"><button type="button" class="wst-link" data-account-mode>${mode === "register" ? "Already have an account? Sign in" : "New here? Create an account"}</button></p>`,
     });
 
@@ -396,6 +399,20 @@
     const emailField = textEl.querySelector(".wst-account-email");
     const show = $("#wstAccountShow");
     const modeButton = textEl.querySelector("[data-account-mode]");
+    const restoreButton = document.createElement("button");
+    restoreButton.type = "button";
+    restoreButton.className = "wst-link";
+    restoreButton.dataset.restoreData = "";
+    restoreButton.textContent = "Restore sign-in from a .ws export";
+    const guestButton = document.createElement("button");
+    guestButton.type = "button";
+    guestButton.className = "wst-link";
+    guestButton.dataset.continueGuest = "";
+    guestButton.textContent = "Continue as guest (Global Chat unavailable)";
+    const accountOptions = document.createElement("p");
+    accountOptions.className = "wst-alt";
+    accountOptions.append(restoreButton, document.createTextNode(" · "), guestButton);
+    form.after(accountOptions);
     emailField.hidden = mode !== "register";
     email.disabled = mode !== "register";
     email.required = mode === "register";
@@ -452,6 +469,20 @@
       mode = mode === "register" ? "login" : "register";
       stepCreateAccount("", mode, current);
     });
+    restoreButton.addEventListener("click", openUploadModal);
+    guestButton.addEventListener("click", () => {
+      try {
+        if (!T?.continueAsGuest?.()) {
+          setStatus("Guest mode could not be enabled. Please reload and try again.");
+          return;
+        }
+        closeGate();
+        window.showToast?.("Continuing as a guest. Global Chat requires a verified account.");
+      } catch (error) {
+        console.error("[tutorial] couldn't enable guest mode:", error);
+        setStatus(error?.message || "Guest mode could not be enabled. Check browser storage and try again.");
+      }
+    });
     [name, email, pass].forEach((input) => {
       input.addEventListener("input", refresh);
       input.addEventListener("keydown", (event) => {
@@ -495,11 +526,11 @@
     // No username (a ticket from before usernames existed): the nickname is
     // still required, as it was.
     const nickOptional = !!username;
-    const existingNick = (localStorage.getItem("nickname") || "").trim();
+    const existingNick = (profileGet("nickname") || "").trim();
     const nickStart    = existingNick && existingNick !== "Nickname" && existingNick !== username ? existingNick : "";
     const images       = Array.isArray(window.PROFILE_IMAGES) ? window.PROFILE_IMAGES
                        : (typeof PROFILE_IMAGES !== "undefined" ? PROFILE_IMAGES : []);
-    const savedPic     = localStorage.getItem("profilePic") || "";
+    const savedPic     = profileGet("profilePic") || "";
     const defaultPic   = typeof DEFAULT_PIC !== "undefined" ? DEFAULT_PIC : "";
     let chosenPic      = savedPic && savedPic !== defaultPic ? savedPic : "";
 
@@ -646,10 +677,10 @@
         if (typeof saveProfile === "function") {
           saveProfile({ name, pic: chosenPic, pixelated: false });
         } else {
-          localStorage.setItem("nickname", name);
-          localStorage.setItem("profilePic", chosenPic);
+          profileSet("nickname", name);
+          profileSet("profilePic", chosenPic);
         }
-        localStorage.setItem(PROFILE_DONE_KEY, "1");
+        profileSet(PROFILE_DONE_KEY, "1");
       } catch (err) {
         // Almost always a full browser storage (a big uploaded picture).
         console.warn("[tutorial] couldn't save the profile:", err);
@@ -730,8 +761,8 @@
     if (!pic) return;
     try {
       if (typeof saveProfile === "function") saveProfile({ name, pic, pixelated: false });
-      else { localStorage.setItem("nickname", name); localStorage.setItem("profilePic", pic); }
-      localStorage.setItem(PROFILE_DONE_KEY, "1");
+      else { profileSet("nickname", name); profileSet("profilePic", pic); }
+      profileSet(PROFILE_DONE_KEY, "1");
       profileFirstDone = true;
     } catch (err) {
       console.warn("[tutorial] couldn't save the ticket picture as the profile:", err);
@@ -769,7 +800,7 @@
     const images   = Array.isArray(window.PROFILE_IMAGES) ? window.PROFILE_IMAGES
                    : (typeof PROFILE_IMAGES !== "undefined" ? PROFILE_IMAGES : []);
     const defPic   = typeof DEFAULT_PIC !== "undefined" ? DEFAULT_PIC : "";
-    const savedPic = (() => { try { const p = localStorage.getItem("profilePic") || ""; return p && p !== defPic ? p : ""; } catch (_) { return ""; } })();
+    const savedPic = (() => { try { const p = profileGet("profilePic") || ""; return p && p !== defPic ? p : ""; } catch (_) { return ""; } })();
 
     const problemFront = (x) =>
          usernameProblem(x.user)
@@ -1136,8 +1167,8 @@
         <button type="button" class="wst-modal-close" aria-label="Close">✕</button>
         <h3 id="wstUpTitle" class="wst-title">Upload your data file</h3>
         <div class="wst-text">
-          <p>Got a ticket on another browser or device? Over there, hit <b>Export Data</b> in the footer, then upload the <b>${escapeHTML(D?.fileName || "ExportData.ws")}</b> it saves.</p>
-          <p class="wst-note">That file holds your ticket's secret key, so keep it to yourself.</p>
+          <p>Choose a WannaSmile <b>${escapeHTML(D?.fileName || "ExportData.ws")}</b> from another browser or device. Current and legacy .ws data files are supported.</p>
+          <p class="wst-note">The account service verifies the saved session before sign-in. Older ticket-only exports can restore settings, but cannot bypass account verification. Keep this file private; it may contain a session key.</p>
         </div>
         <input type="file" accept="${escapeHTML(D?.fileAccept || ".ws")}" hidden />
         <p class="wst-status" aria-live="polite"></p>
@@ -1169,7 +1200,7 @@
       let data;
       try { data = await D.parseDataFile(await D.readFileText(file)); }
       catch (_) { fail("That isn't a WannaSmile data file, or it's been changed. Export a fresh one."); return; }
-      if (!data.ws_ticket_id) { fail("There's no ticket in that file. Export it from the browser that has one."); return; }
+      if (!data.ws_ticket_id) { fail("There's no account session in that file. Import it from the footer to restore settings, or sign in with your account."); return; }
 
       let st;
       try { st = await window.WS_Ticket.verify(data.ws_ticket_id, data.ws_ticket_key); }
@@ -1179,7 +1210,7 @@
         return;
       }
       if (st !== "approved" && st !== "pending" && st !== "denied") {
-        fail("That file's ticket isn't valid. Make sure it's your latest export.");
+        fail("The account service didn't accept that saved session. Older ticket-only exports can't sign in; import settings from the footer, then sign in or create an account.");
         return;
       }
 
@@ -1619,15 +1650,21 @@
   // Account gate for a visitor without a valid Worker session.
   async function openGate() {
     if (!accountNeeded()) return;
+    openAccountGate();
+  }
+
+  function openAccountGate() {
+    if (window.WS_Ticket?.approved()) return;
     gateOnly = !pending;
-    begin();
+    if (!active && !begin()) return;
     try {
-      stepCreateAccount();
+      stepCreateAccount("", window.WS_Ticket?.username() ? "login" : "register");
     } catch (err) {
       console.error("[tutorial] couldn't draw the account form:", err);
       setCard({ step: 0, title: "Welcome to WannaSmile!", html: "<p>Something went wrong loading account setup. Reload the page and try again.</p>" });
     }
   }
+  window.WS_Tutorial.openAccountGate = openAccountGate;
 
   // Gate-only close (the tour was already done): same as finish() minus
   // the tour's done flag, banner and ws:tutorial-done.
@@ -1659,7 +1696,7 @@
     setTimeout(() => { root.hidden = true; }, 250);
     try { localStorage.setItem(DONE_KEY, TUTORIAL_VERSION); } catch (_) {}
 
-    const nick = (localStorage.getItem("nickname") || "").trim();
+    const nick = (profileGet("nickname") || "").trim();
     const done = () => {
       pending = false;
       document.dispatchEvent(new CustomEvent("ws:tutorial-done"));

@@ -472,7 +472,7 @@ kbd {
 </div>
 
 <script src="../../js/endpoints.js"></script>
-<script src="../../js/utils.js"></script>
+<script src="../../js/utils.js?v=account-profile-isolation-2"></script>
 <script src="../../js/ticket.js"></script>
 <script src="../../js/msgcore.js"></script>
 <script src="../../js/themify.js?v=theme-fallback-favicon"></script>
@@ -899,7 +899,7 @@ kbd {
   const frameCards = [];
   const SAMPLE_PIC = "data:image/svg+xml;utf8," + encodeURIComponent(
     "<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><rect width='120' height='120' fill='#5b6b8c'/><circle cx='60' cy='46' r='22' fill='#f2c99a'/><rect x='24' y='74' width='72' height='60' rx='30' fill='#f2c99a'/></svg>");
-  const ownPic = () => { try { return localStorage.getItem("profilePic") || SAMPLE_PIC; } catch { return SAMPLE_PIC; } };
+  const ownPic = () => { try { return window.WS_ProfileStorage ? window.WS_ProfileStorage.get("profilePic") || SAMPLE_PIC : localStorage.getItem("profilePic") || SAMPLE_PIC; } catch { return SAMPLE_PIC; } };
 
   function paintFrames() {
     const cur = window.WSFrames?.saved() || "";

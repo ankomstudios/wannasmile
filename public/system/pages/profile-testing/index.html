@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>WannaSmile | Profile Preview</title>
 <script src="../../js/endpoints.js"></script>
-<script src="../../js/utils.js"></script>
+<script src="../../js/utils.js?v=profile-text-alignment-1"></script>
 <script src="../../js/themify.js?v=theme-fallback-favicon"></script>
 <script>if(new URLSearchParams(location.search).get("embed")==="1")document.documentElement.classList.add("profile-embedded")</script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.9.0/cdn/themes/dark.css" />
@@ -215,6 +215,7 @@
    <p class="panel-intro">By default your bio and member-since date use your display name style. Switch one to Custom to style it on its own.</p>
    <h2>Bio</h2>
    <label><span>Style</span><select id="bioStyle"><option value="inherit">Match display name</option><option value="custom">Custom</option></select></label>
+   <label><span>Alignment</span><select id="bioAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></label>
    <div id="bioCustom" hidden>
     <label><span>Font</span><select id="bioFont" class="font-copy"></select></label>
     <label><span>Size</span><input type="range" id="bioSize" min="10" max="28"></label>
@@ -224,6 +225,7 @@
    </div>
    <h2>Member since</h2>
    <label><span>Style</span><select id="sinceStyle"><option value="inherit">Match display name</option><option value="custom">Custom</option></select></label>
+   <label><span>Alignment</span><select id="sinceAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></label>
    <div id="sinceCustom" hidden>
     <label><span>Font</span><select id="sinceFont" class="font-copy"></select></label>
     <label><span>Size</span><input type="range" id="sinceSize" min="10" max="28"></label>
@@ -368,6 +370,6 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
-<script src="../../js/profile-testing.js?v=clear-profile-styling"></script>
+<script src="../../js/profile-testing.js?v=profile-text-alignment-1"></script>
 </body>
 </html>

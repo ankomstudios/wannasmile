@@ -56,6 +56,14 @@
 
   const read = (k) => { try { return localStorage.getItem(k) || ""; } catch (_) { return ""; } };
   const write = (k, v) => { try { localStorage.setItem(k, v); } catch (_) {} };
+  const profileRead = (k) => {
+    try { return window.WS_ProfileStorage ? window.WS_ProfileStorage.get(k) || "" : read(k); }
+    catch (_) { return ""; }
+  };
+  const profileHas = (k) => {
+    try { return window.WS_ProfileStorage ? window.WS_ProfileStorage.has(k) : !!read(k); }
+    catch (_) { return false; }
+  };
   const json = (k, fallback) => {
     try { const v = JSON.parse(read(k) || "null"); return v && typeof v === "object" ? v : fallback; } catch (_) { return fallback; }
   };
@@ -108,8 +116,11 @@
   }
 
   // ── names and pictures ────────────────────────────────────────────────
-  const ownNick = () => { const n = read("nickname").trim(); return n && n.toLowerCase() !== (S.me || lc(read(K.user))) ? n : ""; };
   const myName = () => S.me || lc(read(K.user));
+  const ownNick = () => {
+    const n = profileRead("nickname").trim();
+    return (n && n.toLowerCase() !== myName() ? n : "") || S.profiles[myName()]?.d || "";
+  };
 
   function displayName(name) {
     const n = lc(name);
@@ -160,8 +171,8 @@
     if (/^(data:|https?:|blob:|\/\/)/i.test(v)) return v;
     try { return new URL(v.replace(/^site:/i, ""), ROOT).href; } catch (_) { return ""; }
   }
-  const ownPic = () => absolutePic(read("profilePic")) || DEFAULT_PIC;
-  const ownPixelated = () => read("pfpPixelated") === "true";
+  const ownPic = () => absolutePic(profileRead("profilePic")) || absolutePic(S.profiles[myName()]?.a) || DEFAULT_PIC;
+  const ownPixelated = () => profileRead("pfpPixelated") === "true";
 
   function fillAvatar(box, name) {
     const n = lc(name);
@@ -196,6 +207,22 @@
   }
   function refreshAvatars(root) {
     (root || document).querySelectorAll("[data-ws-avatar]").forEach((box) => fillAvatar(box, box.dataset.wsAvatar));
+  }
+  function setPublicAvatar(name, value) {
+    const n = lc(name);
+    if (!NAME_RE.test(n)) return;
+    const image = String(value || "").trim();
+    const safeImage = /^data:image\/(?:png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/i.test(image)
+      ? image
+      : (() => {
+          try { const url = new URL(image); return url.protocol === "https:" ? url.href : ""; }
+          catch (_) { return ""; }
+        })();
+    const previous = S.profiles[n] || {};
+    if (previous.a === safeImage) return;
+    S.profiles[n] = { ...previous, a: safeImage };
+    write(K.profiles, JSON.stringify(S.profiles));
+    refreshAvatars();
   }
 
   // ── profiles of friends (display name + avatar) ───────────────────────
@@ -266,7 +293,7 @@
 
     if (!active()) return { ok: false, error: "Sign in to sync public activity." };
     let profile = {};
-    try { profile = JSON.parse(read("ws_profile_style_main") || "{}"); }
+    try { profile = JSON.parse(profileRead("ws_profile_style_main") || "{}"); }
     catch (error) {
       console.error("[WS_Msg] Saved profile data is invalid; public activity was not synced:", error);
       return { ok: false, error: "The saved profile is invalid." };
@@ -301,7 +328,7 @@
   }
 
   async function syncSavedPublicProfile() {
-    const raw = read("ws_profile_style_main");
+    const raw = profileRead("ws_profile_style_main");
     if (!raw) return;
     let profile;
     try { profile = JSON.parse(raw); }
@@ -316,11 +343,13 @@
 
   async function syncProfile() {
     if (!active() || syncing) return;
-    const pic = read("profilePic");
+    const pic = profileRead("profilePic");
     const pixel = ownPixelated();
     const nick = ownNick();
-    const sig = hash([pic, pixel, nick].join("\n"));
-    if (read(K.sig) === sig) return;
+    const user = myName();
+    const sig = hash([user, pic, pixel, nick].join("\n"));
+    if (profileStoreIsScoped() && !["profilePic", "nickname", "pfpPixelated"].some(profileHas)) return true;
+    if (read(K.sig) === sig) return true;
     syncing = true;
     try {
       // Cut the picture first. A picture that can't be cut (another site won't
@@ -343,12 +372,20 @@
       else r = await post("profile", { action: "avatar", variant: "50", dataUrl: url });
       if (!r || r.ok !== true) throw new Error("avatar");
       write(K.sig, sig);
+      S.profiles[user] = { ...(S.profiles[user] || {}), d: nick, a: url, u: String(Date.now()) };
+      write(K.profiles, JSON.stringify(S.profiles));
+      refreshAvatars();
       S.profilesAt = 0;
+      return true;
     } catch (_) {
-      /* tried again on the next page load or profile save */
+      console.error("[WS_Msg] Could not sync the signed-in profile picture.");
+      return false;
     } finally {
       syncing = false;
     }
+  }
+  function profileStoreIsScoped() {
+    return !!window.WS_ProfileStorage?.isAccountScoped();
   }
 
   // ── typing quotes ─────────────────────────────────────────────────────
@@ -788,7 +825,8 @@
     // Another tab read a conversation, polled, or changed the profile.
     window.addEventListener("storage", (e) => {
       if (e.key === K.state) { if (loadShared()) render(); }
-      else if (e.key === "ws_profile_style_main") syncSavedPublicProfile();
+      else if (e.key === window.WS_ProfileStorage?.key("ws_profile_style_main")) syncSavedPublicProfile();
+      else if ([window.WS_ProfileStorage?.key("profilePic"), window.WS_ProfileStorage?.key("nickname"), window.WS_ProfileStorage?.key("pfpPixelated")].includes(e.key)) syncProfile();
       else if (e.key === K.seen) { S.cards.forEach((el, key) => { const n = el.dataset.wsFrom; const f = S.friends.find((x) => x.name === n); if (key.startsWith("m:") && f && f.last && f.last.ts <= (seen()[n] || 0)) dropCard(key); }); render(); }
       else if (e.key === K.profiles) { S.profiles = json(K.profiles, S.profiles); refreshAvatars(); emit(); }
       else if (e.key === K.status && e.newValue !== "approved") { S.dead = true; S.friends = []; S.typing.clear(); render(); }
@@ -797,7 +835,7 @@
   }
 
   window.WS_Msg = {
-    ingest, markSeen, avatar, refreshAvatars, displayName, sendTyping, syncProfile, publishPublicProfile, recordPublicActivity, clearPublicActivity,
+    ingest, markSeen, avatar, refreshAvatars, setPublicAvatar, displayName, sendTyping, syncProfile, publishPublicProfile, recordPublicActivity, clearPublicActivity,
     isTyping, typingText, summaryTyping,
     unread: () => unreadFriends().map((f) => f.name),
     me: () => myName(),
