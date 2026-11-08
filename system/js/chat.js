@@ -68,16 +68,23 @@
 
   // ── names and pictures (WS_Msg when present) ──────────────────────────
   const shown = (name) => (M ? M.displayName(name) : name);
+  const isBotAccount = (name) => cleanName(name) === "wannasmilebot";
   function avatar(name, cls) {
     if (M) return M.avatar(name, cls);
     return el("span", { class: "ws-av" + (cls ? " " + cls : "") }, String(name || "?").charAt(0).toUpperCase());
   }
   // A name that follows later profile updates: refreshNames() rewrites it in place.
-  const nameTag = (tag, user, cls) => el(tag, cls ? { class: cls, "data-ws-name": user, text: shown(user) } : { "data-ws-name": user, text: shown(user) });
+  function nameTag(tag, user, cls) {
+    const node = el(tag, cls ? { class: cls, "data-ws-name": user } : { "data-ws-name": user });
+    node.append(el("span", { class: "ws-name-text", text: shown(user) }));
+    if (isBotAccount(user)) node.append(el("span", { class: "ws-bot-shield", title: "WannaSmile demo bot", "aria-label": "Bot account" }, "bot"));
+    return node;
+  }
   function refreshNames() {
     document.querySelectorAll("[data-ws-name]").forEach((n) => {
       const t = shown(n.dataset.wsName);
-      if (n.textContent !== t) n.textContent = t;
+      const label = n.querySelector(".ws-name-text");
+      if (label && label.textContent !== t) label.textContent = t;
     });
   }
 

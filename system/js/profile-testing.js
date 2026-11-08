@@ -727,6 +727,14 @@ function paint() {
   }
   const n = $("name");
   n.textContent = S.nm || (PUBLIC_PROFILE ? publicProfileName : ls("nickname")) || "Your Name";
+  if (PUBLIC_PROFILE && publicProfileName === "wannasmilebot") {
+    const badge = document.createElement("span");
+    badge.className = "public-bot-shield";
+    badge.textContent = "bot";
+    badge.title = "WannaSmile demo bot";
+    badge.setAttribute("aria-label", "Bot account");
+    n.append(badge);
+  }
   n.style.cssText = `font-family:${S.nf};font-size:${S.ns}px;color:${S.nc};font-weight:${S.nb ? 700 : 400};font-style:${S.ni ? "italic" : "normal"};-webkit-text-stroke:${S.no}px #000;paint-order:stroke fill`;
   const bodyRect = $("body").getBoundingClientRect();
   const actionsRect = $("profileActions").getBoundingClientRect();
@@ -1802,6 +1810,15 @@ function renderActivity() {
   const box = $("activityList"); if (!box) return;
   closeActMenu();
   box.replaceChildren();
+  if (PUBLIC_PROFILE) {
+    const empty = document.createElement("p");
+    empty.className = "profile-empty";
+    empty.textContent = "This account has not shared any public activity.";
+    box.append(empty);
+    $("libStatus").textContent = "";
+    paintTilesSafe();
+    return;
+  }
   const list = readRecent();
   const status = $("libStatus");
   status.textContent = !S.actShow ? "" : LIB.state === "loading" ? "Checking the SQL library…"
@@ -1857,6 +1874,6 @@ $("actShow").addEventListener("change", renderActivity);
   $("memberSince").textContent = Number.isNaN(date.getTime()) ? "" : date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 })();
 renderActivity();
-if (readRecent().length) ensureLibrary();
+if (!PUBLIC_PROFILE && readRecent().length) ensureLibrary();
 
 })();
