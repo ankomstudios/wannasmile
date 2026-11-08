@@ -19,7 +19,7 @@
   <img src="https://img.shields.io/github/repo-size/ankomstudios/wannasmile?style=flat-square&color=red&logo=github&logoColor=white" alt="Repository Size">
   <img src="https://img.shields.io/github/languages/top/ankomstudios/wannasmile?style=flat-square&color=red" alt="Top Language">
   <a href="https://ko-fi.com/ankomstudios">
-    <img src="https://img.shields.io/badge/Support-Donate-red?style=flat-square&logo=githubsponsors&logoColor=white" alt="Support Development">
+    <img src="https://img.shields.io/badge/Support-Ko--fi-F45D22?style=flat-square&logo=ko-fi&logoColor=white" alt="Support on Ko-fi">
   </a>
   <a href="https://open.spotify.com/artist/01JJmyvW0JjxC0fpLurTAR?si=sKugLrpKS6mHCvkg6AOwmQ">
     <img src="https://img.shields.io/badge/Support-Spotify-1DB954?style=flat-square&logo=spotify&logoColor=white" alt="Support Through Spotify">
