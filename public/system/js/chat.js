@@ -42,7 +42,7 @@
   const state = {
     me: "", friends: [], active: "", messages: [], rev: "", grev: "", max: 60, globalOff: false,
     loading: false, again: false, fails: 0, timer: 0, dead: false, sending: false,
-    wanted: "",             // #with=<name> still waiting for the friend list
+    wanted: "", adminNames: [], // #with=<name> still waiting for the friend list
     lastPing: 0,
   };
 
@@ -69,6 +69,7 @@
   // ── names and pictures (WS_Msg when present) ──────────────────────────
   const shown = (name) => (M ? M.displayName(name) : name);
   const isBotAccount = (name) => cleanName(name) === "wannasmilebot";
+  const isAdminAccount = (name) => state.adminNames.includes(cleanName(name));
   function avatar(name, cls) {
     if (M) return M.avatar(name, cls);
     return el("span", { class: "ws-av" + (cls ? " " + cls : "") }, String(name || "?").charAt(0).toUpperCase());
@@ -78,6 +79,7 @@
     const node = el(tag, cls ? { class: cls, "data-ws-name": user } : { "data-ws-name": user });
     node.append(el("span", { class: "ws-name-text", text: shown(user) }));
     if (isBotAccount(user)) node.append(el("span", { class: "ws-bot-shield", title: "WannaSmile demo bot", "aria-label": "Bot account" }, "bot"));
+    if (isAdminAccount(user)) node.append(el("span", { class: "ws-admin-shield", title: "WannaSmile administrator", "aria-label": "Administrator account" }, "admin"));
     return node;
   }
   function refreshNames() {
@@ -85,6 +87,12 @@
       const t = shown(n.dataset.wsName);
       const label = n.querySelector(".ws-name-text");
       if (label && label.textContent !== t) label.textContent = t;
+      const adminBadge = n.querySelector(".ws-admin-shield");
+      if (isAdminAccount(n.dataset.wsName) && !adminBadge) {
+        n.append(el("span", { class: "ws-admin-shield", title: "WannaSmile administrator", "aria-label": "Administrator account" }, "admin"));
+      } else if (!isAdminAccount(n.dataset.wsName) && adminBadge) {
+        adminBadge.remove();
+      }
     });
   }
 
@@ -175,6 +183,16 @@
       state.rev = data.rev || state.rev;
       state.grev = data.grev || state.grev;
       net("live", "Live");
+      const adminNames = Array.isArray(data.adminNames)
+        ? [...new Set(data.adminNames.map(cleanName).filter((name) => NAME_RE.test(name)))]
+        : state.adminNames;
+      const adminsChanged = adminNames.length !== state.adminNames.length || adminNames.some((name) => !state.adminNames.includes(name));
+      if (adminsChanged) {
+        state.adminNames = adminNames;
+        paintMe();
+        refreshNames();
+        if (inGlobal()) renderThread(false);
+      }
       // Typing flags ride on every answer, even "unchanged" ones.
       if (M) M.ingest(data, { viewing: inGlobal() ? "" : state.active });
       if (data.unchanged) return;
@@ -412,6 +430,8 @@
     const dock = $("userNameplate");
     const shield = $("meBotShield");
     if (shield) shield.hidden = !isBotAccount(state.me);
+    const adminShield = $("meAdminShield");
+    if (adminShield) adminShield.hidden = !isAdminAccount(state.me);
     if (dock) {
       const presetPlates = {
         ember: "linear-gradient(100deg,#5a1209,#d6401f 40%,#ffb347 65%,#5a1209)",

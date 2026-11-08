@@ -196,6 +196,7 @@
       publicProfile = {
         username: name,
         profile: result.profile,
+        isAdmin: result.isAdmin === true,
         activity: Array.isArray(result.activity) ? result.activity : [],
         friends: Array.isArray(result.friends) ? result.friends : [],
       };
@@ -254,6 +255,7 @@
         type: "ws-public-profile",
         username: publicProfile.username,
         profile: publicProfile.profile,
+        isAdmin: publicProfile.isAdmin,
         activity: publicProfile.activity,
         friends: publicProfile.friends,
       });

@@ -53,6 +53,7 @@ const FALLBACK_ACH = {
 };
 const $ = (id) => document.getElementById(id);
 let publicProfileName = "";
+let publicProfileIsAdmin = false;
 let publicActivityData = [];
 let publicFriendsData = [];
 let publicProfileDataReady = !PUBLIC_PROFILE;
@@ -738,6 +739,14 @@ function paint() {
     badge.setAttribute("aria-label", "Bot account");
     n.append(badge);
   }
+  if (PUBLIC_PROFILE && publicProfileIsAdmin) {
+    const badge = document.createElement("span");
+    badge.className = "public-admin-shield";
+    badge.textContent = "admin";
+    badge.title = "WannaSmile administrator";
+    badge.setAttribute("aria-label", "Administrator account");
+    n.append(badge);
+  }
   n.style.cssText = `font-family:${S.nf};font-size:${S.ns}px;color:${S.nc};font-weight:${S.nb ? 700 : 400};font-style:${S.ni ? "italic" : "normal"};-webkit-text-stroke:${S.no}px #000;paint-order:stroke fill`;
   const bodyRect = $("body").getBoundingClientRect();
   const actionsRect = $("profileActions").getBoundingClientRect();
@@ -949,6 +958,7 @@ function bindProfilePreview() {
           S.achDemo = true;
           publicProfileName = String(data.username || "").trim().replace(/^@/, "").toLowerCase();
           if (!/^[a-z0-9][a-z0-9_.-]{2,19}$/.test(publicProfileName)) throw new Error("Invalid profile username.");
+          publicProfileIsAdmin = data.isAdmin === true;
           publicActivityData = Array.isArray(data.activity) ? data.activity.filter((entry) =>
             entry && typeof entry.url === "string" && Number.isFinite(entry.t) && /^https?:\/\//i.test(entry.url)
           ).slice(0, RECENT_MAX) : [];

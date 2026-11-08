@@ -56,7 +56,7 @@
 <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.9.0/cdn/themes/dark.css" /></noscript>
 <!-- Shoelace components (sl-alert for achievement pop-ups, credits.js). -->
 <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.9.0/cdn/shoelace-autoloader.js"></script>
-<link rel="stylesheet" href="system/css/main.css?v=profile-frame-scope" />
+<link rel="stylesheet" href="system/css/main.css?v=admin-hierarchy" />
 <link rel="stylesheet" href="system/css/widgets.css" />
 <link rel="stylesheet" href="system/css/shortcuts.css" />
 <link rel="stylesheet" href="system/css/daily.css" />
@@ -245,17 +245,42 @@
   <div id="dashIdRow" class="dash-id-row">
     <span class="dash-names">
       <span id="dashNickname" title="Your nickname">Guest</span>
-      <span id="dashUsername" title="Your account username"></span>
+      <span class="dash-account-line"><span id="dashUsername" title="Your account username"></span><span id="dashAdminShield" class="ws-admin-shield" title="WannaSmile administrator" aria-label="Administrator account" hidden>admin</span></span>
     </span>
     <code id="dashTicketId" role="button" tabindex="0" hidden></code>
   </div>
   <a href="#" id="openUpdates" title="View project updates">Project updates</a>
   <a href="#" id="logoutAccount" title="Sign out of your WannaSmile account" hidden>Log out</a>
+  <button type="button" id="openAdminBots" hidden>Admin: bot profiles</button>
     <a href="system/pages/credits-n-achievements/index.html" target="_blank" id="openCredits" title="Your credits, achievements and early unlocks">Credits &amp; achievements</a>
   <a href="#" id="openRefer" title="Share WannaSmile with a friend">Refer a friend</a>
     <a href="#" id="openTour" title="Walk through the site again">Tutorial</a>
   <a href="#" id="clearData">Clear My Data</a>
 </aside>
+
+<dialog id="adminBotDialog" class="ws-admin-dialog" aria-labelledby="adminBotTitle">
+  <form class="ws-admin-form" onsubmit="return false">
+    <header class="ws-admin-head">
+      <div>
+        <h2 id="adminBotTitle">Bot profile editor</h2>
+        <p>Generate a validated D1 statement, then review and run it in Cloudflare D1.</p>
+      </div>
+      <button type="button" id="closeAdminBots" class="ws-admin-close" aria-label="Close admin tools">&times;</button>
+    </header>
+    <label for="adminBotSelect">Managed bot</label>
+    <select id="adminBotSelect" disabled><option value="">Loading bots…</option></select>
+    <label for="adminBotProfile">Public profile JSON</label>
+    <textarea id="adminBotProfile" rows="12" spellcheck="false" aria-describedby="adminBotStatus"></textarea>
+    <div class="ws-admin-actions">
+      <button type="button" id="reloadAdminBots">Reload profiles</button>
+      <button type="button" id="generateBotSql">Generate D1 SQL</button>
+    </div>
+    <p id="adminBotStatus" class="ws-admin-status" role="status" aria-live="polite"></p>
+    <label for="adminBotSql">Generated SQL (not executed automatically)</label>
+    <textarea id="adminBotSql" rows="7" readonly spellcheck="false"></textarea>
+    <button type="button" id="copyBotSql" class="ws-admin-copy" disabled>Copy SQL</button>
+  </form>
+</dialog>
 
 <div id="containerLoader">
   <img src="https://raw.githubusercontent.com/wannasmile4evr/mediabaseWS/main/gif-packs/redux/loading.gif" alt="loading..." />
@@ -332,6 +357,7 @@
 <script defer src="system/js/datacache.js"></script>
 <script defer src="system/js/paging.js"></script>
 <script defer src="system/js/ticket.js?v=account-logout"></script>
+<script defer src="system/js/admin-panel.js?v=admin-hierarchy"></script>
 <script defer src="system/js/themify.js?v=theme-fallback-favicon"></script>
 <script defer src="system/js/frames.js"></script>
 <script defer src="system/js/wrappers.js"></script>
