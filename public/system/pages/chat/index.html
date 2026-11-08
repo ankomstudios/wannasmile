@@ -205,12 +205,13 @@ div.conv-row { cursor: default; }
 @media (prefers-reduced-motion: reduce) {
   .status.sync::before, .ws-dots i { animation: none; }
 }
-body.profile-modal-open { overflow: hidden; }
-#profileModal.pfm { display:none; position:fixed; inset:0; width:100vw; height:100vh; height:100dvh; box-sizing:border-box; z-index:9999; align-items:center; justify-content:center; overflow:auto; padding:8px; background:rgba(0,0,0,.62); backdrop-filter:blur(8px); }
+body.profile-modal-open { overflow: hidden; backdrop-filter: none; -webkit-backdrop-filter: none; }
+#profileModal.pfm { display:none; position:fixed; inset:0; width:100vw; height:100vh; height:100dvh; box-sizing:border-box; z-index:9999; align-items:center; justify-content:center; overflow:auto; padding:8px; background:transparent; }
 #profileModal.pfm.visible { display:flex; }
-#profileModal .pfm-effects { position:fixed; inset:0; z-index:0; display:block; width:100vw; height:100vh; pointer-events:none; }
+#profileModal.pfm::before { content:""; position:fixed; inset:0; z-index:0; background:rgba(0,0,0,.62); backdrop-filter:blur(8px); }
+#profileModal .pfm-effects { position:fixed; inset:0; z-index:1; display:block; width:100vw; height:100vh; pointer-events:none; }
 #profileModal .pfm-effects[hidden] { display:none; }
-#profileModal .pfm-stage { position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; gap:12px; width:100%; max-width:620px; margin:auto; }
+#profileModal .pfm-stage { position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; gap:12px; width:100%; max-width:620px; margin:auto; }
 #profileModal .pfm-card { width:min(600px,calc(100vw - 24px)); height:var(--pfm-h,420px); max-height:calc(100dvh - 88px); transition:opacity .2s ease; }
 #profileModal[data-stage="full"] .pfm-stage { max-width:980px; }
 #profileModal[data-stage="full"] .pfm-card { width:min(960px,calc(100vw - 24px)); }
