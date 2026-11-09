@@ -73,7 +73,7 @@
   const S = {
     me: "", friends: [], incoming: 0, rev: "",
     typing: new Map(),                 // name -> { until, text }
-    profiles: json(K.profiles, {}),    // name -> { d: display name, u: updated, a: avatar data URL }
+    profiles: json(K.profiles, {}),    // name -> { d: display name, u: updated, a: avatar URL or data URL }
     quotes: null,                      // typing quotes (array) once loaded
     viewing: "",                       // conversation open on the chat page
     loading: false, fails: 0, timer: 0, fastUntil: 0, dead: false,
@@ -178,6 +178,7 @@
     if (/^(data:|https?:|blob:|\/\/)/i.test(v)) return v;
     try { return new URL(v.replace(/^site:/i, ""), ROOT).href; } catch (_) { return ""; }
   }
+  const isGifSource = (src) => /^data:image\/gif(?:;|,)/i.test(String(src || "")) || /\.gif(?:[?#]|$)/i.test(String(src || ""));
   const ownPic = () => absolutePic(profileRead("profilePic")) || absolutePic(S.profiles[myName()]?.a) || DEFAULT_PIC;
   const ownPixelated = () => profileRead("pfpPixelated") === "true";
 
@@ -194,10 +195,11 @@
     const img = document.createElement("img");
     img.alt = "";
     img.draggable = false;
+    img.referrerPolicy = "no-referrer";
     img.addEventListener("error", () => { if (img.isConnected) initial(); });
     img.src = src;
     box.append(img);
-    if (pixel) {
+    if (pixel && !isGifSource(src)) {
       const hit = pixelCache.get(src);
       if (hit) img.src = hit;
       else square(src, 96, 32).then((c) => { const d = c.toDataURL("image/png"); pixelCache.set(src, d); img.src = d; }).catch(() => {});
@@ -369,13 +371,12 @@
     if (read(K.sig) === sig) return true;
     syncing = true;
     try {
-      // Cut the picture first. A picture that can't be cut (another site won't
-      // share it, or this browser can't write WebP) just means friends see the
-      // first letter of your name; the nickname is still shared.
+      const source = absolutePic(pic);
+      const animatedGif = isGifSource(source);
       let url = "";
-      if (pic) {
+      if (pic && !animatedGif) {
         try {
-          const canvas = await square(pic, 50, pixel ? 32 : 0);
+          const canvas = await square(source, 50, pixel ? 32 : 0);
           for (const q of [0.85, 0.7, 0.5, 0.3]) {
             url = canvas.toDataURL("image/webp", q);
             if (url.length <= 44000) break;
@@ -384,18 +385,20 @@
         } catch (_) { url = ""; }
       }
       let r = await post("profile", { action: "save", displayName: nick });
-      if (!r || r.ok !== true) throw new Error("save");
-      if (!pic || !url) r = await post("profile", { action: "avatar_remove", variant: "50" });
+      if (!r || r.ok !== true) throw new Error(r?.error || "Profile name sync failed.");
+      if (!pic) r = await post("profile", { action: "avatar_remove", variant: "50" });
+      else if (animatedGif) r = await post("profile", { action: "avatar_source", source });
+      else if (!url) r = await post("profile", { action: "avatar_remove", variant: "50" });
       else r = await post("profile", { action: "avatar", variant: "50", dataUrl: url });
-      if (!r || r.ok !== true) throw new Error("avatar");
+      if (!r || r.ok !== true) throw new Error(r?.error || "Profile picture sync failed.");
       write(K.sig, sig);
-      S.profiles[user] = { ...(S.profiles[user] || {}), d: nick, a: url, u: String(Date.now()) };
+      S.profiles[user] = { ...(S.profiles[user] || {}), d: nick, a: animatedGif ? source : url, u: String(Date.now()) };
       write(K.profiles, JSON.stringify(S.profiles));
       refreshAvatars();
       S.profilesAt = 0;
       return true;
-    } catch (_) {
-      console.error("[WS_Msg] Could not sync the signed-in profile picture.");
+    } catch (error) {
+      console.error("[WS_Msg] Could not sync the signed-in profile picture:", error);
       return false;
     } finally {
       syncing = false;

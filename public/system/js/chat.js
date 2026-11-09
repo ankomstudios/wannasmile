@@ -416,7 +416,13 @@
             const listed = (roomData.messages || []).map((m, i) => ({ m, i })).sort((a, b) => ((a.m.ts || 0) - (b.m.ts || 0)) || (a.i - b.i)).map((x) => x.m);
             if (asked === GLOBAL && M) {
               listed.forEach((message) => {
-                if (NAME_RE.test(cleanName(message.from))) M.setPublicDisplayName(message.from, message.profileName);
+                if (!NAME_RE.test(cleanName(message.from))) return;
+                M.setPublicDisplayName(message.from, message.profileName);
+              });
+              (Array.isArray(roomData.profileAvatars) ? roomData.profileAvatars : []).forEach((profile) => {
+                if (NAME_RE.test(cleanName(profile.name)) && typeof profile.avatar === "string" && profile.avatar) {
+                  M.setPublicAvatar(profile.name, profile.avatar);
+                }
               });
             }
             const pending = state.sending ? state.messages.filter((m) => m.pending) : [];
