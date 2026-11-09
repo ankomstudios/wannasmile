@@ -44,8 +44,8 @@
 <script>
 // Preload whichever theme is actually cached as active (see themify.js's
 // ws_theme_cache), instead of always warming up Nexus's images regardless
-// of what the user actually last used. Falls back to Nexus's own images on
-// a first-ever visit, when nothing has been cached yet.
+// of what the user actually last used. Use Nexus images on a first visit,
+// when nothing has been cached yet.
 (function () {
   // No approved ticket = the ticket / onboarding screen is up and the page
   // behind it isn't drawn, so these images would sit unused and the browser
@@ -53,10 +53,10 @@
   try { if (localStorage.getItem("ws_ticket_status") !== "approved") return; } catch (_) { return; }
 
   var FALLBACK = [
-    "https://ws.ankomstudios.com/themes/nexus/header/splash.png",
-    "https://ws.ankomstudios.com/themes/nexus/quote/splash.png",
-    "https://ws.ankomstudios.com/themes/nexus/main/splash.png",
-    "https://ws.ankomstudios.com/themes/nexus/footer/splash.png"
+    "https://raw.githubusercontent.com/securlydetected/assets/refs/heads/main/themes/nexus/header/headerbg.png",
+    "https://raw.githubusercontent.com/securlydetected/assets/refs/heads/main/themes/nexus/quote/quotebg.png",
+    "https://raw.githubusercontent.com/securlydetected/assets/refs/heads/main/themes/nexus/main/mainbg.png",
+    "https://raw.githubusercontent.com/securlydetected/assets/refs/heads/main/themes/nexus/footer/footerbg.png"
   ];
 
   function isPreloadableImage(v) {
@@ -70,7 +70,7 @@
   var onLiveSite   = /^(?:wannasmile4evr|vvannazmile)\.github\.io\.?$/i.test(location.hostname);
   function localize(v) {
     if (onLiveSite) return v;
-    var assetUrl = window.toSiteAsset(v);
+    var assetUrl = typeof window.toSiteAsset === "function" ? window.toSiteAsset(v) : v;
     if (assetUrl !== v) return assetUrl;
     return String(v).trim().replace(LIVE_SITE_RE, "");
   }
@@ -82,14 +82,16 @@
     var activeId = selectedId === "redux" && !explicitlyApplied ? "nexus" : selectedId;
     var cache    = JSON.parse(localStorage.getItem("ws_theme_cache") || "{}");
     var row      = cache && typeof cache === "object" && activeId !== "nexus" ? cache[activeId] : null;
-    if (row) urls = [row[3], row[4], row[5], row[6]].filter(isPreloadableImage);
+    if (activeId === "nexus" || activeId === "theme_fallback") urls = FALLBACK;
+    else if (row) urls = [row[3], row[4], row[5], row[6]].filter(isPreloadableImage);
   } catch (_) { urls = null; }
 
   (urls && urls.length ? urls : FALLBACK).forEach(function (href) {
     var link = document.createElement("link");
     link.rel  = "preload";
     link.as   = "image";
-    link.href = localize(window.toMediabase(href));
+    var assetUrl = typeof window.toMediabase === "function" ? window.toMediabase(href) : href;
+    link.href = localize(assetUrl);
     document.head.appendChild(link);
   });
 })();

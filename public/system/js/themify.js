@@ -10,18 +10,18 @@ const THEME_EXPLICIT_KEY = "ws_theme_explicit";
 // these copies as soon as the local catalog has loaded.
 const BUILTIN_THEME_ROWS = [[
   "Theme Fallback", "theme_fallback", "ok",
-  "/system/theme/nexus/shade5.png",
-  "/system/theme/nexus/shade4.png",
-  "/system/theme/nexus/mainbg.png",
-  "/system/theme/nexus/shade1.png",
+  "https://raw.githubusercontent.com/securlydetected/assets/refs/heads/main/themes/nexus/header/headerbg.png",
+  "https://raw.githubusercontent.com/securlydetected/assets/refs/heads/main/themes/nexus/quote/quotebg.png",
+  "https://raw.githubusercontent.com/securlydetected/assets/refs/heads/main/themes/nexus/main/mainbg.png",
+  "https://raw.githubusercontent.com/securlydetected/assets/refs/heads/main/themes/nexus/footer/footerbg.png",
   "rgba(0, 0, 0, 0.95)", "#000", "#fff", "#fff", "#ff4444",
   "#f0f0f0", "#333", "#888", "#333", "rgba(0, 0, 0, 0.3)", "#000", "",
 ], [
   "Nexus", "nexus", "ready",
-  "https://ws.ankomstudios.com/themes/nexus/header/splash.png",
-  "https://ws.ankomstudios.com/themes/nexus/quote/splash.png",
-  "https://ws.ankomstudios.com/themes/nexus/main/splash.png",
-  "https://ws.ankomstudios.com/themes/nexus/footer/splash.png",
+  "https://raw.githubusercontent.com/securlydetected/assets/refs/heads/main/themes/nexus/header/headerbg.png",
+  "https://raw.githubusercontent.com/securlydetected/assets/refs/heads/main/themes/nexus/quote/quotebg.png",
+  "https://raw.githubusercontent.com/securlydetected/assets/refs/heads/main/themes/nexus/main/mainbg.png",
+  "https://raw.githubusercontent.com/securlydetected/assets/refs/heads/main/themes/nexus/footer/footerbg.png",
   "rgba(0, 0, 0, 0.95)", "#000", "#fff", "#fff", "#ff4444",
   "#f0f0f0", "#333", "#888", "#333", "rgba(0, 0, 0, 0.3)", "#000", "",
 ]];
@@ -72,10 +72,10 @@ const _COL = {
 };
 
 const _ROOT_CSS = `:root {
-  --header-bg: url("/system/theme/nexus/shade5.png");
-  --quote-bg: url("/system/theme/nexus/shade4.png");
-  --main-bg: url("/system/theme/nexus/mainbg.png");
-  --footer-bg: url("/system/theme/nexus/shade1.png");
+  --header-bg: url("https://raw.githubusercontent.com/securlydetected/assets/refs/heads/main/themes/nexus/header/headerbg.png");
+  --quote-bg: url("https://raw.githubusercontent.com/securlydetected/assets/refs/heads/main/themes/nexus/quote/quotebg.png");
+  --main-bg: url("https://raw.githubusercontent.com/securlydetected/assets/refs/heads/main/themes/nexus/main/mainbg.png");
+  --footer-bg: url("https://raw.githubusercontent.com/securlydetected/assets/refs/heads/main/themes/nexus/footer/footerbg.png");
   --aside-bg: rgba(0, 0, 0, 0.95);
   --text-color: #000;
   --url-color: #fff;
@@ -805,30 +805,24 @@ function _rememberThemeRow(id) {
   try { localStorage.setItem(THEME_CACHE_KEY, JSON.stringify(cache)); } catch (_) {}
 }
 
-// ── Background fallback ──────────────────────────────────────────────────
-// The page background is whatever the active theme's --main-bg is. If that
-// image doesn't load (bad link, host down, offline), html gets .ws-bg-fallback
-// and the CSS swaps in the local fallback theme's main background instead
-// (main.css, and the store / credits pages). Rechecked whenever the theme
-// changes, however it changes (a MutationObserver on html[theme]).
+// ── Background validation ────────────────────────────────────────────────
+// Validate the active main background for the smart-scrolling effect without
+// swapping in a local image when the configured asset is unavailable.
 let _bgCheckId = 0;
 function _checkMainBg() {
   const id = ++_bgCheckId;
   requestAnimationFrame(() => {
     if (id !== _bgCheckId) return;
     const root = document.documentElement;
-    syncFallbackFavicon();
     const val  = getComputedStyle(root).getPropertyValue("--main-bg").trim();
     const m    = val.match(/url\(\s*(['"]?)(.*?)\1\s*\)/i);
     if (!m) {                       // a colour or gradient: nothing to fail
-      root.classList.toggle("ws-bg-fallback", !val);
-      syncFallbackFavicon();
       _smartBg.setImage(null);
       return;
     }
     const img = new Image();
-    img.onload  = () => { if (id === _bgCheckId) { root.classList.remove("ws-bg-fallback"); syncFallbackFavicon(); _smartBg.setImage(img); } };
-    img.onerror = () => { if (id === _bgCheckId) { root.classList.add("ws-bg-fallback"); syncFallbackFavicon(); _smartBg.setImage(null); } };
+    img.onload  = () => { if (id === _bgCheckId) _smartBg.setImage(img); };
+    img.onerror = () => { if (id === _bgCheckId) _smartBg.setImage(null); };
     img.src = m[2];
   });
 }

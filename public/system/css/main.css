@@ -26,12 +26,6 @@ html {
   background-size: cover;
   background-position: center center;
 }
-/* The active theme's background didn't load (themify.js's _checkMainBg):
-   fall back to the local default theme image. */
-html.ws-bg-fallback {
-  background-image: url("/system/theme/nexus/mainbg.png");
-}
-
 body {
   min-height: 100%;
   background: transparent;
