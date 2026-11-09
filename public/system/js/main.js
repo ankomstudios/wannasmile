@@ -1089,6 +1089,7 @@ window.addEventListener("load", () => {
     const creditPrice = Math.max(0, parseInt(priceRaw, 10) || 0);
 
     return {
+      slug:        safeStr(row.slug).trim(),
       title, author, creditPrice,
       titleLC:     title.toLowerCase(),
       authorLC:    author.toLowerCase(),
@@ -1936,30 +1937,25 @@ window.addEventListener("load", () => {
         }
       }, true);
 
-      // The report being filed: the card's asset link (how data.gs finds the
-      // row, and where title/author really come from) and the chosen reason.
+      // The report queue resolves the canonical asset fields from the SQL library.
       let pendingReport = null;
       let sending = false;
 
-      // POST { type:"report" } to the DATA Apps Script (data.gs "Reports"). The
-      // server validates the ticket, the reason and that the asset exists, and
-      // writes the row to ReportsWS. Resolves { ok:true } or { ok:false, error }.
-      async function sendReport({ link, reason }) {
-        const endpoint = window.WS_ENDPOINTS && window.WS_ENDPOINTS.data;
+      // The chat Worker authenticates the account and saves a verified SQL asset report.
+      async function sendReport({ slug, reason }) {
+        const endpoint = window.WS_ENDPOINTS && window.WS_ENDPOINTS.chat;
         if (!endpoint) return { ok: false, error: "Reports aren't set up on this site." };
         let ticket = "", key = "";
         try { ticket = localStorage.getItem("ws_ticket_id") || ""; key = localStorage.getItem("ws_ticket_key") || ""; } catch (_) {}
         if (!ticket) return { ok: false, error: "Finish the access ticket step first, then report again." };
-        if (!link) return { ok: false, error: "This card has no link to report." };
+        if (!slug) return { ok: false, error: "This asset is missing its library ID and can't be reported." };
 
         const ctrl  = new AbortController();
         const timer = setTimeout(() => ctrl.abort(), 20000);
         try {
-          // No Content-Type header: a text/plain body is a "simple" request, so
-          // there's no CORS preflight (Apps Script can't answer one).
           const res = await fetch(endpoint, {
             method: "POST", cache: "no-store", signal: ctrl.signal,
-            body: JSON.stringify({ type: "report", ticket, key, link, reason }),
+            body: JSON.stringify({ type: "report", ticket, key, slug, reason }),
           });
           if (!res.ok) return { ok: false, error: "The report server answered " + res.status + ". Try again in a moment." };
           const out = await res.json();
@@ -2002,8 +1998,8 @@ window.addEventListener("load", () => {
         }
       });
 
-      window._openBugReportModal = ({ title, author, image, reason, link }) => {
-        pendingReport          = { link: String(link || "").trim(), reason };
+      window._openBugReportModal = ({ slug, title, author, image, reason }) => {
+        pendingReport          = { slug: String(slug || "").trim(), reason };
         imgEl.src              = image || "";
         imgEl.alt              = title || "";
         titleEl2.textContent   = title || "Untitled";
@@ -2486,7 +2482,7 @@ window.addEventListener("load", () => {
           item.addEventListener("click", (e) => {
             e.preventDefault(); e.stopPropagation();
             closeBugMenu();
-            window._openBugReportModal?.({ title, author, image: imageSrc, reason, link: m.linkTrim });
+            window._openBugReportModal?.({ slug: m.slug, title, author, image: imageSrc, reason });
           });
           bugMenu.appendChild(item);
         }

@@ -15,6 +15,7 @@
 //    can read and post in, no friend request needed.
 //  • TESTER CHAT: a private room available only to accounts with the tester
 //    badge (GET &room=tester, POST send {room:"tester"}).
+//  • BUG REPORTS: a read-only report queue visible only to testers and admins.
 //    people meet: click anyone's name or picture to view their profile, add
 //    them as a friend, then talk privately. It's the pseudo-conversation GLOBAL
 //    ("#global") in state.active; a real username can never start with "#".
@@ -42,10 +43,11 @@
   const GROUP_GAP_MS = 5 * 60000; // messages from one person closer than this share one avatar/name
   const GLOBAL = "#global";       // the global room, in place of a friend's username in state.active
   const TESTER = "#tester";       // tester-only room; never accepted as a real username
+  const BUG_REPORTS = "#bug-reports";
   const MENTIONS = "#mentions";
 
   const state = {
-    me: "", friends: [], active: "", messages: [], rev: "", grev: "", trev: "", profileRev: "", max: 60, globalOff: false,
+    me: "", friends: [], active: "", messages: [], bugReports: [], bugReportError: "", rev: "", grev: "", trev: "", brev: "", profileRev: "", max: 60, globalOff: false,
     loading: false, again: false, fails: 0, timer: 0, dead: false, sending: false, mentions: [], mentionUnread: 0,
     wanted: "", jumpToId: 0, highlightId: 0, dmUnread: 0, replyTo: null, composerMedia: null, editingId: 0, messageBusy: new Set(), rolesByName: Object.create(null), // #with=<name> still waiting for the friend list
     lastPing: 0,
@@ -58,8 +60,9 @@
   const visibleNow = () => document.visibilityState === "visible" && document.hasFocus();
   const inGlobal = () => state.active === GLOBAL;
   const inTester = () => state.active === TESTER;
+  const inBugReports = () => state.active === BUG_REPORTS;
   const inMentions = () => state.active === MENTIONS;
-  const inSharedRoom = () => inGlobal() || inTester() || inMentions();
+  const inSharedRoom = () => inGlobal() || inTester() || inBugReports() || inMentions();
   const escapeRegExp = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const hasMentionToken = (text, name) => new RegExp(`(?:^|\\s)@${escapeRegExp(name)}(?=$|[\\s.,!?;:)])`, "i").test(String(text || ""));
   const mentionNamesIn = (text) => state.friends
@@ -230,6 +233,7 @@
   const isBotAccount = (name) => cleanName(name) === "wannasmilebot";
   const accountRoles = (name) => state.rolesByName[cleanName(name)] || [];
   const isRoleAccount = (name, role) => accountRoles(name).includes(role);
+  const canViewBugReports = () => isRoleAccount(state.me, "tester") || isRoleAccount(state.me, "admin");
   const ROLE_LABELS = { admin: "Administrator", contributor: "Contributor", tester: "Tester" };
   const roleMapSignature = (roles) => JSON.stringify(Object.keys(roles).sort()
     .map((name) => [name, [...roles[name]].sort()]));
@@ -342,6 +346,8 @@
         ? { room: "global", rev: force ? "" : state.rev, grev: force ? "" : state.grev }
         : asked === TESTER
           ? { room: "tester", rev: force ? "" : state.rev, trev: force ? "" : state.trev }
+          : asked === BUG_REPORTS
+            ? { room: "bug-reports", rev: force ? "" : state.rev, brev: force ? "" : state.brev }
           : { with: asked, rev: force ? "" : state.rev });
       state.fails = 0;
 
@@ -360,6 +366,17 @@
           renderConversation();
           return;
         }
+        if (asked === BUG_REPORTS && data && data.code === "bug_reports_role") {
+          state.active = "";
+          state.bugReports = [];
+          state.rev = "";
+          state.brev = "";
+          if (M) M.setViewing("");
+          toast("Bug reports are only available to tester and admin accounts.");
+          renderFriends();
+          renderConversation();
+          return;
+        }
         throw new Error((data && data.error) || "Unexpected reply");
       }
 
@@ -368,6 +385,7 @@
       state.rev = data.rev || state.rev;
       state.grev = data.grev || state.grev;
       state.trev = data.trev || state.trev;
+      state.brev = data.brev || state.brev;
       if (data.profileRev != null && String(data.profileRev) !== state.profileRev) {
         state.profileRev = String(data.profileRev);
         if (M) Promise.resolve(M.refreshProfiles(true)).catch((error) => console.error("[chat] Could not refresh linked profile names.", error));
@@ -392,7 +410,17 @@
         paintMe();
         refreshNames();
         renderFriends();
-        if (inTester()) renderConversation();
+        if (inBugReports()) {
+          if (!canViewBugReports()) {
+            state.active = "";
+            state.bugReports = [];
+            state.rev = "";
+            state.brev = "";
+            if (M) M.setViewing("");
+            toast("Bug reports are only available to tester and admin accounts.");
+            renderConversation();
+          } else renderConversation();
+        } else if (inTester()) renderConversation();
         else if (inSharedRoom()) renderThread(false);
       }
       // Typing flags ride on every answer, even "unchanged" ones.
@@ -410,7 +438,11 @@
       } else if (inSharedRoom()) {
         // An answer meant for another conversation (the person switched while it
         // was in flight) is skipped; the refresh queued by open() follows it.
-        if (asked === GLOBAL || asked === TESTER) {
+        if (asked === BUG_REPORTS) {
+          state.bugReports = Array.isArray(data.bugReports) ? data.bugReports : [];
+          state.bugReportError = "";
+          state.messages = [];
+        } else if (asked === GLOBAL || asked === TESTER) {
           const roomData = asked === GLOBAL ? data.global : data.tester;
           if (asked === GLOBAL) state.globalOff = !roomData;
           if (roomData) {
@@ -456,6 +488,10 @@
     } catch (err) {
       state.fails++;
       net("off", "Offline");
+      if (asked === BUG_REPORTS) {
+        state.bugReportError = "Bug reports could not be loaded. Check your connection and try again.";
+        renderThread(false);
+      }
     } finally {
       state.loading = false;
       if (state.again) { state.again = false; refresh(true); }
@@ -520,15 +556,16 @@
     state.rev = "";
     state.grev = "";
     state.trev = "";
+    state.brev = "";
     state.lastPing = 0;
     closeUserMenu();
     paintDockPlate();
     $("chat").classList.add("open");
-    if (M) M.setViewing(name === GLOBAL || name === TESTER ? "" : name);
+    if (M) M.setViewing(name === GLOBAL || name === TESTER || name === BUG_REPORTS ? "" : name);
     renderFriends();
     renderConversation();
     refresh(true);
-    $("msg").focus({ preventScroll: true });
+    if (!inBugReports()) $("msg").focus({ preventScroll: true });
   }
 
   function closeConversation() {
@@ -541,6 +578,7 @@
     state.rev = "";
     state.grev = "";
     state.trev = "";
+    state.brev = "";
     state.jumpToId = 0;
     state.highlightId = 0;
     paintDockPlate();
@@ -597,6 +635,7 @@
   function sendMedia(value) {
     const media = normalizeMedia(value);
     if (!media) return toast("That media link is not supported.");
+    if (inBugReports()) return toast("Bug reports are read-only.");
     if (inTester() && !canPostTester()) return toast("Admins can review the tester channel but only tester accounts can post there.");
     state.composerMedia = media;
     paintMediaAttachment();
@@ -606,6 +645,7 @@
   }
 
   async function send() {
+    if (inBugReports()) return toast("Bug reports are read-only.");
     const box = $("msg");
     const text = box.value.trim();
     const media = state.composerMedia || spotifyMediaFromText(text);
@@ -1087,10 +1127,14 @@
       el("span", { class: "ws-av global-av", "aria-hidden": "true" }, icon("fa-solid fa-earth-americas")),
       el("span", { class: "tx" }, el("span", { class: "nm", text: "Global chat" }), el("span", { class: "pv", text: "Everyone with an account · no friend request needed" }))
     ));
-    if (isRoleAccount(state.me, "tester") || isRoleAccount(state.me, "admin")) {
+    if (canViewBugReports()) {
       list.append(el("button", { class: "conv-row tester" + (inTester() ? " on" : ""), type: "button", onclick: () => open(TESTER) },
         el("span", { class: "ws-av tester-av", "aria-hidden": "true" }, icon("fa-solid fa-user-shield")),
         el("span", { class: "tx" }, el("span", { class: "nm", text: "Tester channel" }), el("span", { class: "pv", text: isRoleAccount(state.me, "tester") ? "Private tester room" : "Admin moderation access" }))
+      ));
+      list.append(el("button", { class: "conv-row bug-reports" + (inBugReports() ? " on" : ""), type: "button", onclick: () => open(BUG_REPORTS) },
+        el("span", { class: "ws-av bug-reports-av", "aria-hidden": "true" }, icon("fa-solid fa-flag")),
+        el("span", { class: "tx" }, el("span", { class: "nm", text: "Bug reports" }), el("span", { class: "pv", text: "Private · testers and admins" }))
       ));
     }
     list.append(el("button", { class: "conv-row mention-row" + (inMentions() ? " on" : "") + (state.mentionUnread ? " unread" : ""), type: "button", onclick: () => open(MENTIONS) },
@@ -1142,7 +1186,7 @@
     list.scrollTop = keep;
   }
 
-  const peerTitle = () => inGlobal() ? "Global chat" : inTester() ? "Tester channel" : inMentions() ? "Mentions" : shown(state.active);
+  const peerTitle = () => inGlobal() ? "Global chat" : inTester() ? "Tester channel" : inBugReports() ? "Bug reports" : inMentions() ? "Mentions" : shown(state.active);
 
   function paintUnreadBadge() {
     const count = state.dmUnread + state.mentionUnread;
@@ -1164,6 +1208,8 @@
         ? el("span", { class: "ws-av global-av" }, icon("fa-solid fa-earth-americas"))
         : inTester()
           ? el("span", { class: "ws-av tester-av" }, icon("fa-solid fa-user-shield"))
+          : inBugReports()
+            ? el("span", { class: "ws-av bug-reports-av" }, icon("fa-solid fa-flag"))
           : inMentions()
             ? el("span", { class: "ws-av mention-av" }, icon("fa-solid fa-at"))
             : avatar(state.active));
@@ -1174,8 +1220,8 @@
     peerProfileButton.setAttribute("aria-label", inSharedRoom() ? peerTitle() : `View @${state.active}'s profile`);
     peerProfileButton.title = inSharedRoom() ? "" : `View @${state.active}'s profile`;
     $("removeBtn").hidden = inSharedRoom();
-    $("composerWrap").hidden = inMentions();
-    $("typingRow").hidden = inMentions();
+    $("composerWrap").hidden = inMentions() || inBugReports();
+    $("typingRow").hidden = inMentions() || inBugReports();
     const testerReadOnly = inTester() && !canPostTester();
     $("msg").disabled = testerReadOnly;
     $("mediaBtn").disabled = testerReadOnly;
@@ -1187,6 +1233,8 @@
       : inTester()
         ? testerReadOnly ? "Admins can review and moderate this private room; tester-role accounts can post"
           : `Only tester-role accounts can post here · latest ${state.max} messages are kept`
+        : inBugReports()
+          ? "Private report queue · visible to tester and admin accounts"
         : inMentions()
           ? "Recent messages where linked friends mentioned you"
       : `only the latest ${state.max} messages are kept`;
@@ -1204,6 +1252,7 @@
       sub.className = on ? "typing" : "";
       sub.textContent = on ? line : inGlobal() ? "Everyone with an account can read and post here"
         : inTester() ? "Private tester channel"
+          : inBugReports() ? "Community reports for library assets"
           : inMentions() ? "Recent messages where linked friends mentioned you"
             : state.active ? "@" + state.active : "";
     }
@@ -1221,6 +1270,17 @@
   function renderThread(forceBottom) {
     const box = $("thread");
     const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+    if (inBugReports()) {
+      box.textContent = "";
+      renderedMessages.clear();
+      renderedDays.clear();
+      $("cap").textContent = state.bugReports.length
+        ? `${state.bugReports.length}${state.bugReports.length === 100 ? "+" : ""} reports`
+        : "";
+      renderBugReports(box);
+      if (forceBottom || nearBottom) box.scrollTop = box.scrollHeight;
+      return;
+    }
     if (inMentions()) {
       box.textContent = "";
       renderedMessages.clear();
@@ -1295,6 +1355,88 @@
     paintPlates();
     if (forceBottom || nearBottom) box.scrollTop = box.scrollHeight;
     resolveJumpTarget();
+  }
+
+  function reportUrl(value) {
+    try {
+      const url = new URL(String(value || ""), location.href);
+      return url.protocol === "https:" || url.protocol === "http:" ? url.href : "";
+    } catch (_) {
+      return "";
+    }
+  }
+
+  function renderBugReports(box) {
+    if (state.bugReportError) {
+      box.append(el("div", { class: "empty bug-report-empty", role: "status" }, icon("fa-solid fa-triangle-exclamation"), state.bugReportError));
+      return;
+    }
+    if (!state.bugReports.length) {
+      box.append(el("div", { class: "empty bug-report-empty" }, icon("fa-regular fa-flag"), "No bug reports yet. New asset reports will appear here."));
+      return;
+    }
+
+    for (const report of state.bugReports) {
+      const reporter = cleanName(report.reporter);
+      if (M && NAME_RE.test(reporter)) {
+        M.setPublicDisplayName(reporter, report.reporterDisplayName || "");
+        if (report.reporterAvatar) M.setPublicAvatar(reporter, report.reporterAvatar);
+      }
+      const createdAt = Number(report.createdAt);
+      const timestamp = Number.isFinite(createdAt) && createdAt > 0
+        ? new Date(createdAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })
+        : "Time unavailable";
+      const displayName = report.reporterDisplayName || shown(reporter);
+      const profile = reporter && NAME_RE.test(reporter)
+        ? avatar(reporter, "sm")
+        : el("span", { class: "ws-av sm", "aria-hidden": "true" }, "?");
+      const name = reporter && NAME_RE.test(reporter)
+        ? nameTag("span", reporter, "bug-report-name", displayName)
+        : el("span", { class: "bug-report-name", text: displayName || "Unknown user" });
+      const byline = el("div", { class: "bug-report-byline" },
+        profile,
+        el("span", { class: "bug-report-reporter" },
+          el("span", { class: "bug-report-reporter-name" }, name),
+          el("span", { class: "bug-report-reporter-meta", text: `@${reporter || "unknown"} · reported an asset` })
+        ),
+        el("time", {
+          class: "bug-report-time",
+          dateTime: Number.isFinite(createdAt) && createdAt > 0 ? new Date(createdAt).toISOString() : "",
+          text: timestamp,
+        })
+      );
+
+      const iconBox = el("span", { class: "bug-report-icon" }, icon("fa-regular fa-image"));
+      const imageUrl = reportUrl(report.assetImage);
+      if (imageUrl) {
+        const image = el("img", { alt: "", loading: "lazy", referrerpolicy: "no-referrer" });
+        image.addEventListener("error", () => {
+          image.remove();
+          iconBox.append(icon("fa-regular fa-image"));
+        }, { once: true });
+        image.src = imageUrl;
+        iconBox.textContent = "";
+        iconBox.append(image);
+      }
+      const assetTitle = String(report.assetTitle || "Untitled asset");
+      const link = reportUrl(report.assetLink);
+      const title = link
+        ? el("a", { class: "bug-report-asset-title", href: link, target: "_blank", rel: "noopener noreferrer" }, assetTitle)
+        : el("strong", { class: "bug-report-asset-title", text: assetTitle });
+      const author = String(report.assetAuthor || "").trim();
+      const page = Math.max(1, Number.parseInt(report.page, 10) || 1);
+      const details = el("div", { class: "bug-report-asset-details" },
+        el("span", { class: "bug-report-label", text: "Reported asset" }),
+        title,
+        el("span", { class: "bug-report-author", text: author ? `by ${author}` : "by unknown author" }),
+        el("span", { class: "bug-report-reason", text: `Reason: ${String(report.reason || "Unspecified")}` }),
+        el("span", { class: "bug-report-page", text: `Page ${page}` })
+      );
+      box.append(el("article", {
+        class: "bug-report-card",
+        "aria-label": `${displayName || reporter || "Unknown user"} reported ${assetTitle}`,
+      }, byline, el("div", { class: "bug-report-preview" }, iconBox, details)));
+    }
   }
 
   function ensureMessageEntry(message, key) {

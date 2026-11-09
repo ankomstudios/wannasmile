@@ -133,6 +133,7 @@ div.conv-row { cursor: default; }
 .conv-row:hover { background: rgba(255,255,255,0.06); }
 .conv-row.on { background: rgba(255,255,255,0.12); border-left-color: var(--accent-color, #f44); }
 .conv-row.tester .tester-av { color:#d5c9ff; border-color:#8c78d8; background:rgba(98,82,168,.24); }
+.bug-reports-av { color:var(--accent-color,#f44); border-color:var(--accent-color,#f44); background:rgba(255,255,255,.1); }
 .conv-row.mention-row .mention-av,.mention-av { color:#ffd3ec; border-color:#b65a8d; background:rgba(182,90,141,.2); }
 .mention-count { flex:none; min-width:20px; padding:2px 6px; border:1px solid var(--accent-color,#f44); border-radius:999px; background:rgba(255,255,255,.12); color:inherit; font-size:.72rem; font-weight:bold; text-align:center; }
 .conv-row .tx { flex: 1; min-width: 0; }
@@ -163,6 +164,25 @@ div.conv-row { cursor: default; }
 .day { align-self: center; margin: 10px 0 6px; font-size: 0.68rem; opacity: 0.7; padding: 2px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.25); }
 .note { align-self: center; font-size: 0.7rem; opacity: 0.6; margin-bottom: 4px; }
 .thread .empty { margin: auto; }
+.bug-report-empty { display:grid; justify-items:center; gap:10px; max-width:32rem; line-height:1.55; }
+.bug-report-empty i { color:var(--accent-color,#f44); font-size:1.5rem; }
+.bug-report-card { align-self:center; width:min(760px,100%); margin:8px 0; padding:14px; border:1px solid rgba(255,255,255,.18); border-top:2px solid var(--accent-color,#f44); border-radius:12px; background:rgba(0,0,0,.24); box-shadow:0 7px 20px rgba(0,0,0,.2); }
+.bug-report-byline { display:flex; align-items:center; gap:10px; min-width:0; margin-bottom:12px; }
+.bug-report-reporter { display:grid; min-width:0; gap:2px; }
+.bug-report-reporter-name { display:flex; align-items:center; gap:6px; min-width:0; font-weight:bold; }
+.bug-report-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.bug-report-reporter-meta,.bug-report-time { font-size:.72rem; color:rgba(255,255,255,.76); }
+.bug-report-time { flex:none; margin-left:auto; text-align:right; font-variant-numeric:tabular-nums; }
+.bug-report-preview { display:grid; grid-template-columns:72px minmax(0,1fr); align-items:center; gap:14px; padding:12px; border:1px solid rgba(255,255,255,.14); border-radius:9px; background:rgba(255,255,255,.055); }
+.bug-report-icon { display:grid; place-items:center; width:72px; aspect-ratio:1; overflow:hidden; border:1px solid rgba(255,255,255,.2); border-radius:8px; background:rgba(0,0,0,.3); color:rgba(255,255,255,.72); }
+.bug-report-icon img { display:block; width:100%; height:100%; object-fit:cover; }
+.bug-report-asset-details { display:grid; justify-items:start; gap:4px; min-width:0; }
+.bug-report-label { color:rgba(255,255,255,.72); font-size:.66rem; font-weight:bold; letter-spacing:.06em; text-transform:uppercase; }
+.bug-report-asset-title { max-width:100%; color:inherit; font-size:.98rem; font-weight:bold; line-height:1.3; overflow-wrap:anywhere; text-decoration-thickness:1px; text-underline-offset:3px; }
+.bug-report-asset-title:hover,.bug-report-asset-title:focus-visible { color:var(--accent-color,#f44); }
+.bug-report-asset-title:focus-visible { outline:2px solid var(--accent-color,#f44); outline-offset:3px; border-radius:2px; }
+.bug-report-author,.bug-report-page { color:rgba(255,255,255,.78); font-size:.76rem; overflow-wrap:anywhere; }
+.bug-report-reason { margin-top:3px; padding:4px 8px; border:1px solid var(--accent-color,#f44); border-radius:999px; color:var(--url-color,#fff); font-size:.72rem; font-weight:bold; }
 
 /* a run of messages from one person: avatar beside it, name + time above */
 .grp { display: flex; align-items: flex-end; gap: 8px; margin-top: 10px; max-width: 82%; }
@@ -313,6 +333,11 @@ div.conv-row { cursor: default; }
   .inbox.open .conv { display: flex; }
   #backBtn { display: inline-flex; }
   .grp { max-width: 94%; }
+  .bug-report-card { padding:11px; }
+  .bug-report-byline { flex-wrap:wrap; }
+  .bug-report-time { margin-left:auto; }
+  .bug-report-preview { grid-template-columns:60px minmax(0,1fr); gap:10px; padding:9px; }
+  .bug-report-icon { width:60px; }
   .back span { display: none; }
   .media-picker { padding:12px; }
   .media-dialog { width:100%; max-height:calc(100dvh - 24px); border-radius:16px; }
@@ -458,6 +483,6 @@ body.profile-modal-open { overflow: hidden; backdrop-filter: none; -webkit-backd
 <script src="../../js/cursors.js"></script>
 <script src="../../js/msgcore.js?v=animated-avatar-chat-1"></script>
 <script src="../../js/profile-modal.js?v=profile-text-alignment-1"></script>
-<script src="../../js/chat.js?v=message-controls-stable-player-1"></script>
+<script src="../../js/chat.js?v=bug-report-channel-1"></script>
 </body>
 </html>
