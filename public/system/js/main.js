@@ -3227,6 +3227,7 @@ window.addEventListener("load", () => {
     const image = value(item.image).trim();
     const unavailableIcon = /^https?:\/\/raw\.githubusercontent\.com\/mcmattyobriore\/crazycars\/gh-pages\/crazy-cars\.png(?:[?#]|$)/i.test(image);
     return {
+      slug: value(item.slug),
       title: value(item.title),
       author: value(item.author),
       link: value(item.link),

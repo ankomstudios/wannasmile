@@ -220,7 +220,7 @@ window.showToast = function showToast(message, timeout = 2200) {
       padding:       "10px 14px",
       borderRadius:  "8px",
       fontFamily:    "monospace",
-      zIndex:        "99999",
+      zIndex:        "1000001",
       opacity:       "0",
       transition:    "opacity 220ms ease",
       pointerEvents: "none",
