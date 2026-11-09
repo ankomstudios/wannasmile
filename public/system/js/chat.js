@@ -47,9 +47,11 @@
   const state = {
     me: "", friends: [], active: "", messages: [], rev: "", grev: "", trev: "", profileRev: "", max: 60, globalOff: false,
     loading: false, again: false, fails: 0, timer: 0, dead: false, sending: false, mentions: [], mentionUnread: 0,
-    wanted: "", jumpToId: 0, highlightId: 0, dmUnread: 0, replyTo: null, composerMedia: null, rolesByName: Object.create(null), // #with=<name> still waiting for the friend list
+    wanted: "", jumpToId: 0, highlightId: 0, dmUnread: 0, replyTo: null, composerMedia: null, editingId: 0, messageBusy: new Set(), rolesByName: Object.create(null), // #with=<name> still waiting for the friend list
     lastPing: 0,
   };
+  const renderedMessages = new Map();
+  const renderedDays = new Map();
 
   const toast = (m) => (window.showToast ? window.showToast(m, 3200) : console.log(m));
   const cleanName = (v) => String(v || "").trim().replace(/^@/, "").toLowerCase();
@@ -390,7 +392,8 @@
         paintMe();
         refreshNames();
         renderFriends();
-        if (inSharedRoom()) renderThread(false);
+        if (inTester()) renderConversation();
+        else if (inSharedRoom()) renderThread(false);
       }
       // Typing flags ride on every answer, even "unchanged" ones.
       if (M) M.ingest(data, { viewing: inSharedRoom() ? "" : state.active });
@@ -508,6 +511,7 @@
     }
     state.active = name;
     state.messages = [];
+    state.editingId = 0;
     state.jumpToId = Number.isSafeInteger(Number(jumpToId)) && Number(jumpToId) > 0 ? Number(jumpToId) : 0;
     state.highlightId = state.jumpToId;
     closeMentionPicker();
@@ -532,6 +536,7 @@
     closeMentionPicker();
     state.active = "";
     state.replyTo = null;
+    state.editingId = 0;
     renderReplyComposer();
     state.rev = "";
     state.grev = "";
@@ -556,6 +561,7 @@
     if (!window.confirm(`Remove ${shown(name)} (@${name})? This also deletes your chat with them.`)) return;
     state.active = "";
     state.replyTo = null;
+    state.editingId = 0;
     renderReplyComposer();
     if (M) M.setViewing("");
     $("chat").classList.remove("open");
@@ -591,6 +597,7 @@
   function sendMedia(value) {
     const media = normalizeMedia(value);
     if (!media) return toast("That media link is not supported.");
+    if (inTester() && !canPostTester()) return toast("Admins can review the tester channel but only tester accounts can post there.");
     state.composerMedia = media;
     paintMediaAttachment();
     closeMediaPicker(false);
@@ -604,6 +611,7 @@
     const media = state.composerMedia || spotifyMediaFromText(text);
     const gifUrl = media && media.kind === "image" ? normalizeGifUrl(media.url) : "";
     if ((!text && !media) || !state.active || state.sending) return;
+    if (inTester() && !accountRoles(state.me).includes("tester")) return toast("Admins can review the tester channel but only tester accounts can post there.");
     const mentions = mentionNamesIn(text).filter(isMentionAllowed);
     // Global chat is public, so it gets the same word filter as nicknames and
     // ticket reasons (wordfilter.js; checked here, in the browser).
@@ -620,7 +628,7 @@
     updateCount();
     autosize();
     const tmp = {
-      from: state.me, text, gifUrl, media, mentions, ts: Date.now(), pending: true,
+      from: state.me, text, gifUrl, media, mentions, ts: Date.now(), pending: true, clientKey: `pending-${Date.now()}-${Math.random()}`,
       replyTo: replyTo ? { id: replyTo.id, from: replyTo.from, text: replyTo.text, gifUrl: replyTo.gifUrl, media: replyTo.media || null, unavailable: replyTo.unavailable } : null,
     };
     state.replyTo = null;
@@ -648,6 +656,67 @@
     } finally {
       state.sending = false;
       refresh(true);
+    }
+  }
+
+  function messageActionPayload(id) {
+    return inGlobal() ? { id, room: "global" }
+      : inTester() ? { id, room: "tester" }
+        : { id, to: state.active };
+  }
+  function canPostTester() {
+    return !inTester() || accountRoles(state.me).includes("tester");
+  }
+  function canEditMessage(message) {
+    return !!message.id && message.from === state.me && !message.pending;
+  }
+  function canDeleteMessage(message) {
+    if (!message.id || message.pending) return false;
+    if (message.from === state.me) return true;
+    return (inGlobal() || inTester()) && accountRoles(state.me).includes("admin");
+  }
+  async function saveMessageEdit(id, textarea) {
+    const text = textarea.value.trim();
+    if (text.length > MAX_TEXT) return toast(`Messages can be up to ${MAX_TEXT} characters.`);
+    const busyKey = `edit:${id}`;
+    if (state.messageBusy.has(busyKey)) return;
+    state.messageBusy.add(busyKey);
+    textarea.disabled = true;
+    try {
+      const result = await post("edit", { ...messageActionPayload(id), text });
+      if (!result || result.ok !== true) throw new Error(result?.error || "That message could not be edited.");
+      state.editingId = 0;
+      toast("Message updated.");
+      refresh(true);
+    } catch (error) {
+      console.error("[chat] Could not edit message:", error);
+      toast(error.message || "That message could not be edited.");
+      textarea.disabled = false;
+      textarea.focus();
+    } finally {
+      state.messageBusy.delete(busyKey);
+      renderThread(false);
+    }
+  }
+  async function deleteMessage(id) {
+    if (!window.confirm("Delete this message? This can't be undone.")) return;
+    const busyKey = `delete:${id}`;
+    if (state.messageBusy.has(busyKey)) return;
+    state.messageBusy.add(busyKey);
+    try {
+      const result = await post("delete", messageActionPayload(id));
+      if (!result || result.ok !== true) throw new Error(result?.error || "That message could not be deleted.");
+      state.messages = state.messages.filter((message) => Number(message.id) !== id);
+      state.editingId = 0;
+      renderThread(false);
+      toast("Message deleted.");
+      refresh(true);
+    } catch (error) {
+      console.error("[chat] Could not delete message:", error);
+      toast(error.message || "That message could not be deleted.");
+    } finally {
+      state.messageBusy.delete(busyKey);
+      renderThread(false);
     }
   }
 
@@ -1018,10 +1087,10 @@
       el("span", { class: "ws-av global-av", "aria-hidden": "true" }, icon("fa-solid fa-earth-americas")),
       el("span", { class: "tx" }, el("span", { class: "nm", text: "Global chat" }), el("span", { class: "pv", text: "Everyone with an account · no friend request needed" }))
     ));
-    if (isRoleAccount(state.me, "tester")) {
+    if (isRoleAccount(state.me, "tester") || isRoleAccount(state.me, "admin")) {
       list.append(el("button", { class: "conv-row tester" + (inTester() ? " on" : ""), type: "button", onclick: () => open(TESTER) },
         el("span", { class: "ws-av tester-av", "aria-hidden": "true" }, icon("fa-solid fa-user-shield")),
-        el("span", { class: "tx" }, el("span", { class: "nm", text: "Tester channel" }), el("span", { class: "pv", text: "Private to tester-role accounts" }))
+        el("span", { class: "tx" }, el("span", { class: "nm", text: "Tester channel" }), el("span", { class: "pv", text: isRoleAccount(state.me, "tester") ? "Private tester room" : "Admin moderation access" }))
       ));
     }
     list.append(el("button", { class: "conv-row mention-row" + (inMentions() ? " on" : "") + (state.mentionUnread ? " unread" : ""), type: "button", onclick: () => open(MENTIONS) },
@@ -1107,11 +1176,17 @@
     $("removeBtn").hidden = inSharedRoom();
     $("composerWrap").hidden = inMentions();
     $("typingRow").hidden = inMentions();
-    $("msg").placeholder = inGlobal() ? "Message everyone… (Enter to send)" : inTester() ? "Message testers… (Enter to send)" : "Message… (Enter to send)";
+    const testerReadOnly = inTester() && !canPostTester();
+    $("msg").disabled = testerReadOnly;
+    $("mediaBtn").disabled = testerReadOnly;
+    $("sendBtn").disabled = testerReadOnly;
+    $("msg").placeholder = testerReadOnly ? "Tester channel is read-only for admins"
+      : inGlobal() ? "Message everyone… (Enter to send)" : inTester() ? "Message testers… (Enter to send)" : "Message… (Enter to send)";
     $("keepNote").textContent = inGlobal()
       ? `global chat is open to everyone with an account · only the latest ${state.max} messages are kept`
       : inTester()
-        ? `Only tester-role accounts can read or post here · latest ${state.max} messages are kept`
+        ? testerReadOnly ? "Admins can review and moderate this private room; tester-role accounts can post"
+          : `Only tester-role accounts can post here · latest ${state.max} messages are kept`
         : inMentions()
           ? "Recent messages where linked friends mentioned you"
       : `only the latest ${state.max} messages are kept`;
@@ -1146,8 +1221,10 @@
   function renderThread(forceBottom) {
     const box = $("thread");
     const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
-    box.textContent = "";
     if (inMentions()) {
+      box.textContent = "";
+      renderedMessages.clear();
+      renderedDays.clear();
       $("cap").textContent = state.mentionUnread ? `${state.mentionUnread} unread` : `${state.mentions.length} recent`;
       renderMentionInbox(box);
       return;
@@ -1155,6 +1232,9 @@
     const n = state.messages.length;
     $("cap").textContent = n ? `${Math.min(n, state.max)}/${state.max}` : "";
     if (!n) {
+      box.textContent = "";
+      renderedMessages.clear();
+      renderedDays.clear();
       box.append(el("div", { class: "empty", text: state.globalOff && inGlobal()
         ? "Global chat is unavailable right now. Try again in a moment."
         : inGlobal() ? "Nobody has said anything yet. Say hi to everyone!"
@@ -1162,93 +1242,52 @@
             : `Say hi to ${shown(state.active)}!` }));
       return;
     }
-    if (n >= state.max) box.append(el("div", { class: "note", text: "Older messages are deleted automatically to keep the latest " + state.max + "." }));
-
-    let lastDay = "", grp = null, stack = null, prev = null;
-    for (const m of state.messages) {
-      const dk = dayKey(m.ts);
-      if (dk !== lastDay) { box.append(el("div", { class: "day", text: fmtDay(m.ts) })); lastDay = dk; grp = null; }
-      const mine = m.from === state.me;
-      // A new run starts for a different sender or after a pause.
-      if (!grp || !prev || prev.from !== m.from || m.ts - prev.ts > GROUP_GAP_MS) {
-        const person = (node) => {
-          if (mine) return node;
-          if (inGlobal()) return el("button", {
-            class: "who-btn", type: "button", title: "@" + m.from, "aria-label": "Options for " + shown(m.from),
-            onclick: (e) => showUserMenu(m.from, e.currentTarget),
-          }, node);
-          return el("button", {
-            class: "who-btn", type: "button", title: `View @${m.from}'s profile`, "aria-label": `View ${shown(m.from)}'s profile`,
-            onclick: () => openPublicProfile(m.from),
-          }, node);
-        };
-        stack = el("div", { class: "stack" },
-          el("div", { class: "by" }, person(nameTag("b", m.from, "", inGlobal() ? m.profileName : undefined)), " · " + (m.pending ? "sending…" : fmtTime(m.ts))));
-        grp = el("div", { class: "grp " + (mine ? "me" : "them") }, person(avatar(m.from, "sm")), stack);
-        box.append(grp);
+    const desired = [];
+    if (n >= state.max) desired.push(el("div", { class: "note", text: "Older messages are deleted automatically to keep the latest " + state.max + "." }));
+    const liveKeys = new Set();
+    const liveDays = new Set();
+    let lastDay = "", prev = null;
+    for (let index = 0; index < state.messages.length; index++) {
+      const message = state.messages[index];
+      const key = Number.isSafeInteger(Number(message.id)) && Number(message.id) > 0
+        ? `message-${message.id}` : message.clientKey || `pending-${message.ts}-${index}`;
+      const currentDay = dayKey(message.ts);
+      if (currentDay !== lastDay) {
+        let dayNode = renderedDays.get(currentDay);
+        if (!dayNode) {
+          dayNode = el("div", { class: "day", text: fmtDay(message.ts), "data-day": currentDay });
+          renderedDays.set(currentDay, dayNode);
+        }
+        desired.push(dayNode);
+        liveDays.add(currentDay);
+        lastDay = currentDay;
       }
-      const body = el("div", { class: "message-body" });
-      if (m.replyTo) {
-        body.append(m.replyTo.unavailable
-          ? el("div", { class: "reply-quote" }, el("b", { text: "Original message" }), el("span", { text: "This message is no longer available" }))
-          : el("div", { class: "reply-quote" }, el("b", { text: shown(m.replyTo.from) }), el("span", { text: m.replyTo.text || mediaLabel(m.replyTo.media, m.replyTo.gifUrl) })));
-      }
-      const media = normalizeMedia(m.media) || (normalizeGifUrl(m.gifUrl) ? { kind: "image", url: normalizeGifUrl(m.gifUrl) } : null);
-      if (media) body.append(renderMessageMedia(media));
-      if (m.text) body.append(renderMessageText(m));
-      const replyButton = el("button", {
-        class: "message-reply", type: "button", title: "Reply to this message",
-        "aria-label": `Reply to ${shown(m.from)}'s message`, hidden: !m.id || m.pending,
-        onclick: () => setReplyTarget(m),
-      }, icon("fa-solid fa-reply"));
-      stack.append(el("div", { class: "message-line" + (Number(m.id) === state.highlightId ? " mention-target" : ""), "data-message-id": Number.isSafeInteger(Number(m.id)) ? Number(m.id) : null }, body, replyButton));
-      prev = m;
+      const continuation = !!prev && prev.from === message.from && dayKey(prev.ts) === currentDay && message.ts - prev.ts <= GROUP_GAP_MS;
+      const entry = ensureMessageEntry(message, key);
+      entry.row.classList.toggle("continuation", continuation);
+      updateMessageEntry(entry, message);
+      desired.push(entry.row);
+      liveKeys.add(key);
+      prev = message;
     }
-
-    function renderMessageMedia(media) {
-      const frame = el("div", { class: `shared-media shared-media-${media.kind}` });
-      const fallback = () => {
-        frame.textContent = "";
-        frame.append(el("span", { class: "gif-failed", text: "Media unavailable" }));
-      };
-      if (media.kind === "image") {
-        const image = el("img", {
-          class: "chat-gif", src: media.url, alt: media.title || "Shared image or GIF",
-          loading: "lazy", decoding: "async", referrerpolicy: "no-referrer",
-        });
-        image.addEventListener("error", fallback, { once: true });
-        frame.append(image);
-      } else if (media.kind === "video") {
-        const video = el("video", { controls: true, preload: "metadata", playsinline: true, referrerpolicy: "no-referrer" });
-        video.src = media.url;
-        video.addEventListener("error", fallback, { once: true });
-        frame.append(video);
-      } else if (media.kind === "audio") {
-        const audio = el("audio", { controls: true, preload: "metadata" });
-        audio.src = media.url;
-        audio.addEventListener("error", fallback, { once: true });
-        frame.append(audio);
-      } else if (media.kind === "youtube" || media.kind === "spotify") {
-        const iframe = el("iframe", {
-          src: media.url, title: media.title || (media.kind === "youtube" ? "YouTube video" : "Spotify player"),
-          loading: "lazy", referrerpolicy: "strict-origin-when-cross-origin",
-          sandbox: "allow-scripts allow-same-origin allow-presentation",
-          allow: "autoplay; encrypted-media; fullscreen; picture-in-picture",
-        });
-        frame.append(iframe);
-      } else {
-        let url;
-        try { url = new URL(media.url); } catch (_) { return frame; }
-        const anchor = el("a", {
-          href: url.href, target: "_blank", rel: "noopener noreferrer nofollow",
-          class: "shared-link",
-        }, icon("fa-solid fa-arrow-up-right-from-square"), el("span", {},
-          el("b", { text: media.title || url.hostname }),
-          el("small", { text: url.hostname })));
-        frame.append(anchor);
+    renderedDays.forEach((node, day) => {
+      if (!liveDays.has(day)) {
+        node.remove();
+        renderedDays.delete(day);
       }
-      return frame;
-    }
+    });
+    renderedMessages.forEach((entry, key) => {
+      if (!liveKeys.has(key)) {
+        entry.row.remove();
+        renderedMessages.delete(key);
+      }
+    });
+    const desiredSet = new Set(desired);
+    [...box.children].forEach((child) => { if (!desiredSet.has(child)) child.remove(); });
+    desired.forEach((node, index) => {
+      const current = box.children[index] || null;
+      if (current !== node) box.insertBefore(node, current);
+    });
     if (inGlobal()) {
       const versions = new Map(state.messages.map((m) => [m.from, Math.max(Number(m.profileUpdated) || 0, 0)]));
       versions.forEach((updated, name) => wantPlate(name, updated));
@@ -1256,6 +1295,179 @@
     paintPlates();
     if (forceBottom || nearBottom) box.scrollTop = box.scrollHeight;
     resolveJumpTarget();
+  }
+
+  function ensureMessageEntry(message, key) {
+    let entry = renderedMessages.get(key);
+    if (entry) return entry;
+    const mine = message.from === state.me;
+    const person = (node) => {
+      if (mine) return node;
+      if (inGlobal()) return el("button", {
+        class: "who-btn", type: "button", title: "@" + message.from, "aria-label": "Options for " + shown(message.from),
+        onclick: (event) => showUserMenu(message.from, event.currentTarget),
+      }, node);
+      return el("button", {
+        class: "who-btn", type: "button", title: `View @${message.from}'s profile`, "aria-label": `View ${shown(message.from)}'s profile`,
+        onclick: () => openPublicProfile(message.from),
+      }, node);
+    };
+    const identity = person(nameTag("b", message.from, "", inGlobal() ? message.profileName : undefined));
+    const edited = el("small", { class: "message-edited", text: "edited", hidden: true });
+    const header = el("div", { class: "by" }, identity, " · ", el("span", { class: "message-time" }), " ", edited);
+    const avatarButton = person(avatar(message.from, "sm"));
+    avatarButton.classList.add("message-avatar");
+    const body = el("div", { class: "message-body" });
+    const textSlot = el("div", { class: "message-text-slot" });
+    body.append(textSlot);
+    const line = el("div", { class: "message-line", "data-message-id": Number(message.id) || null }, body);
+    const replyButton = el("button", {
+      class: "message-action message-reply", type: "button", title: "Reply to this message",
+      "aria-label": `Reply to ${shown(message.from)}'s message`,
+      onclick: () => setReplyTarget(state.messages.find((candidate) => Number(candidate.id) === Number(message.id))),
+    }, icon("fa-solid fa-reply"));
+    const editButton = el("button", {
+      class: "message-action", type: "button", title: "Edit message", "aria-label": "Edit message",
+      onclick: () => { state.editingId = Number(message.id); renderThread(false); },
+    }, icon("fa-solid fa-pen"));
+    const deleteButton = el("button", {
+      class: "message-action", type: "button", title: "Delete message", "aria-label": "Delete message",
+      onclick: () => deleteMessage(Number(message.id)),
+    }, icon("fa-solid fa-trash"));
+    const actions = el("div", { class: "message-actions" }, replyButton, editButton, deleteButton);
+    line.append(actions);
+    const stack = el("div", { class: "stack" }, header, line);
+    const row = el("div", { class: "grp " + (mine ? "me" : "them"), "data-message-key": key }, avatarButton, stack);
+    entry = {
+      key, row, line, header, identity, edited, time: header.querySelector(".message-time"),
+      avatarButton, body, textSlot, replyButton, editButton, deleteButton,
+      replyNode: null, replyKey: "", mediaNode: null, mediaKey: "", bubble: null, bubbleKey: "",
+      editor: null, editorKey: "",
+    };
+    renderedMessages.set(key, entry);
+    return entry;
+  }
+
+  function updateMessageEntry(entry, message) {
+    const id = Number(message.id) || 0;
+    entry.line.dataset.messageId = id || "";
+    entry.line.classList.toggle("mention-target", id > 0 && id === state.highlightId);
+    const display = inGlobal() && typeof message.profileName === "string"
+      ? message.profileName.trim().slice(0, 30) || cleanName(message.from) : shown(message.from);
+    entry.identity.dataset.wsDisplay = display;
+    const identityText = entry.identity.querySelector(".ws-name-text");
+    if (identityText) identityText.textContent = display;
+    entry.time.textContent = message.pending ? "sending…" : fmtTime(message.ts);
+    entry.edited.hidden = !message.editedAt;
+    const editAllowed = canEditMessage(message);
+    const deleteAllowed = canDeleteMessage(message);
+    entry.replyButton.hidden = !id || message.pending || (inTester() && !canPostTester());
+    entry.editButton.hidden = !editAllowed;
+    entry.deleteButton.hidden = !deleteAllowed;
+    for (const button of [entry.replyButton, entry.editButton, entry.deleteButton]) {
+      button.disabled = state.messageBusy.has(`${button === entry.editButton ? "edit" : button === entry.deleteButton ? "delete" : "reply"}:${id}`);
+    }
+
+    const reply = message.replyTo || null;
+    const replyKey = reply ? JSON.stringify([reply.id, reply.from, reply.text, reply.media, reply.gifUrl, reply.unavailable]) : "";
+    if (replyKey !== entry.replyKey) {
+      entry.replyNode?.remove();
+      entry.replyNode = reply ? (reply.unavailable
+        ? el("div", { class: "reply-quote" }, el("b", { text: "Original message" }), el("span", { text: "This message is no longer available" }))
+        : el("div", { class: "reply-quote" }, el("b", { text: shown(reply.from) }), el("span", { text: reply.text || mediaLabel(reply.media, reply.gifUrl) }))) : null;
+      entry.replyKey = replyKey;
+      if (entry.replyNode) entry.body.insertBefore(entry.replyNode, entry.body.firstChild);
+    }
+
+    const media = normalizeMedia(message.media) || (normalizeGifUrl(message.gifUrl) ? { kind: "image", url: normalizeGifUrl(message.gifUrl) } : null);
+    const mediaKey = media ? JSON.stringify(media) : "";
+    if (mediaKey !== entry.mediaKey) {
+      entry.mediaNode?.remove();
+      entry.mediaNode = media ? renderMessageMedia(media) : null;
+      entry.mediaKey = mediaKey;
+      if (entry.mediaNode) entry.body.insertBefore(entry.mediaNode, entry.textSlot);
+    }
+    const textKey = JSON.stringify([message.text || "", message.mentions || [], message.pending ? 1 : 0]);
+    if (textKey !== entry.bubbleKey) {
+      entry.bubble = message.text ? renderMessageText(message) : null;
+      if (entry.bubble) entry.bubble.title = message.pending ? "" : fmtTime(message.ts);
+      entry.bubbleKey = textKey;
+      if (entry.editor && state.editingId === id) {
+        entry.editor.textarea.value = message.text || "";
+      } else {
+        entry.textSlot.replaceChildren(...(entry.bubble ? [entry.bubble] : []));
+      }
+    }
+    const editing = id > 0 && state.editingId === id;
+    if (editing && !entry.editor) {
+      const textarea = el("textarea", { class: "message-edit-input", maxlength: MAX_TEXT, "aria-label": "Edit message" });
+      textarea.value = message.text || "";
+      const save = el("button", {
+        class: "btn sm", type: "button", text: "Save",
+        onclick: () => saveMessageEdit(id, textarea),
+      });
+      const cancel = el("button", {
+        class: "btn ghost sm", type: "button", text: "Cancel",
+        onclick: () => { state.editingId = 0; renderThread(false); },
+      });
+      const controls = el("div", { class: "message-edit-controls" }, save, cancel);
+      entry.editor = { textarea, node: el("div", { class: "message-editor" }, textarea, controls) };
+      textarea.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") { state.editingId = 0; renderThread(false); }
+        else if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); saveMessageEdit(id, textarea); }
+      });
+      entry.textSlot.replaceChildren(entry.editor.node);
+      textarea.focus({ preventScroll: true });
+    } else if (!editing && entry.editor) {
+      entry.editor.node.remove();
+      entry.editor = null;
+      entry.textSlot.replaceChildren(...(entry.bubble ? [entry.bubble] : []));
+    }
+  }
+
+  function renderMessageMedia(media) {
+    const frame = el("div", { class: `shared-media shared-media-${media.kind}` });
+    const fallback = () => {
+      frame.textContent = "";
+      frame.append(el("span", { class: "gif-failed", text: "Media unavailable" }));
+    };
+    if (media.kind === "image") {
+      const image = el("img", {
+        class: "chat-gif", src: media.url, alt: media.title || "Shared image or GIF",
+        loading: "lazy", decoding: "async", referrerpolicy: "no-referrer",
+      });
+      image.addEventListener("error", fallback, { once: true });
+      frame.append(image);
+    } else if (media.kind === "video") {
+      const video = el("video", { controls: true, preload: "metadata", playsinline: true, referrerpolicy: "no-referrer" });
+      video.src = media.url;
+      video.addEventListener("error", fallback, { once: true });
+      frame.append(video);
+    } else if (media.kind === "audio") {
+      const audio = el("audio", { controls: true, preload: "metadata" });
+      audio.src = media.url;
+      audio.addEventListener("error", fallback, { once: true });
+      frame.append(audio);
+    } else if (media.kind === "youtube" || media.kind === "spotify") {
+      const iframe = el("iframe", {
+        src: media.url, title: media.title || (media.kind === "youtube" ? "YouTube video" : "Spotify player"),
+        loading: "lazy", referrerpolicy: "strict-origin-when-cross-origin",
+        sandbox: "allow-scripts allow-same-origin allow-presentation",
+        allow: "autoplay; encrypted-media; fullscreen; picture-in-picture",
+      });
+      frame.append(iframe);
+    } else {
+      let url;
+      try { url = new URL(media.url); } catch (_) { return frame; }
+      const anchor = el("a", {
+        href: url.href, target: "_blank", rel: "noopener noreferrer nofollow",
+        class: "shared-link",
+      }, icon("fa-solid fa-arrow-up-right-from-square"), el("span", {},
+        el("b", { text: media.title || url.hostname }),
+        el("small", { text: url.hostname })));
+      frame.append(anchor);
+    }
+    return frame;
   }
 
   function renderMessageText(message) {
